@@ -95,6 +95,7 @@ class CameraViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        view.backgroundColor = .black
         setupCamera()
         setupCaptureButton()
     }
@@ -104,8 +105,8 @@ class CameraViewController: UIViewController {
         previewLayer?.frame = view.bounds
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
         startSession()
     }
 
@@ -115,30 +116,61 @@ class CameraViewController: UIViewController {
     }
 
     private func setupCamera() {
-        let session = AVCaptureSession()
-        session.sessionPreset = .photo
+        // 在后台线程配置相机会话
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            let session = AVCaptureSession()
+            session.beginConfiguration()
+            session.sessionPreset = .photo
 
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-              let input = try? AVCaptureDeviceInput(device: camera),
-              session.canAddInput(input) else {
-            return
+            // 获取后置摄像头
+            guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+                print("❌ 无法获取摄像头")
+                session.commitConfiguration()
+                return
+            }
+
+            // 创建输入
+            guard let input = try? AVCaptureDeviceInput(device: camera) else {
+                print("❌ 无法创建摄像头输入")
+                session.commitConfiguration()
+                return
+            }
+
+            guard session.canAddInput(input) else {
+                print("❌ 无法添加摄像头输入")
+                session.commitConfiguration()
+                return
+            }
+
+            session.addInput(input)
+
+            // 创建照片输出
+            let output = AVCapturePhotoOutput()
+            guard session.canAddOutput(output) else {
+                print("❌ 无法添加照片输出")
+                session.commitConfiguration()
+                return
+            }
+
+            session.addOutput(output)
+            session.commitConfiguration()
+
+            self.photoOutput = output
+            self.captureSession = session
+
+            // 在主线程添加预览图层
+            DispatchQueue.main.async {
+                let previewLayer = AVCaptureVideoPreviewLayer(session: session)
+                previewLayer.videoGravity = .resizeAspectFill
+                previewLayer.frame = self.view.bounds
+                self.view.layer.insertSublayer(previewLayer, at: 0)
+                self.previewLayer = previewLayer
+                
+                print("✅ 相机设置完成")
+            }
         }
-
-        session.addInput(input)
-
-        let output = AVCapturePhotoOutput()
-        guard session.canAddOutput(output) else { return }
-        session.addOutput(output)
-
-        self.photoOutput = output
-        self.captureSession = session
-
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.videoGravity = .resizeAspectFill
-        previewLayer.frame = view.bounds
-        view.layer.addSublayer(previewLayer)
-
-        self.previewLayer = previewLayer
     }
 
     private func setupCaptureButton() {
@@ -184,23 +216,45 @@ class CameraViewController: UIViewController {
         ])
 
         captureButton.addTarget(self, action: #selector(capturePhoto), for: .touchUpInside)
+        
+        print("✅ 拍照按钮已设置")
     }
 
     @objc private func capturePhoto() {
+        guard let photoOutput = photoOutput else {
+            print("❌ 照片输出未初始化")
+            return
+        }
+        
         let settings = AVCapturePhotoSettings()
         settings.flashMode = .auto
-        photoOutput?.capturePhoto(with: settings, delegate: self)
+        photoOutput.capturePhoto(with: settings, delegate: self)
+        
+        print("📸 开始拍照")
     }
 
     private func startSession() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.captureSession?.startRunning()
+        guard let session = captureSession else {
+            print("❌ 相机会话未初始化")
+            return
+        }
+        
+        if !session.isRunning {
+            DispatchQueue.global(qos: .userInitiated).async {
+                session.startRunning()
+                print("✅ 相机会话已启动")
+            }
         }
     }
 
     private func stopSession() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.captureSession?.stopRunning()
+        guard let session = captureSession else { return }
+        
+        if session.isRunning {
+            DispatchQueue.global(qos: .userInitiated).async {
+                session.stopRunning()
+                print("🛑 相机会话已停止")
+            }
         }
     }
 }
@@ -208,11 +262,18 @@ class CameraViewController: UIViewController {
 // MARK: - AVCapturePhotoCaptureDelegate
 extension CameraViewController: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        if let error = error {
+            print("❌ 拍照错误: \(error.localizedDescription)")
+            return
+        }
+        
         guard let imageData = photo.fileDataRepresentation(),
               let image = UIImage(data: imageData) else {
+            print("❌ 无法处理照片数据")
             return
         }
 
+        print("✅ 照片拍摄成功，尺寸: \(image.size)")
         delegate?.didCaptureImage(image)
     }
 }
