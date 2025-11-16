@@ -266,7 +266,7 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
             print("❌ 拍照错误: \(error.localizedDescription)")
             return
         }
-        
+
         guard let imageData = photo.fileDataRepresentation(),
               let image = UIImage(data: imageData) else {
             print("❌ 无法处理照片数据")
@@ -275,5 +275,12 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
 
         print("✅ 照片拍摄成功，尺寸: \(image.size)")
         delegate?.didCaptureImage(image)
+    }
+}
+
+// MARK: - Preview
+#Preview {
+    CameraView { image in
+        print("Preview: 捕获图片，尺寸: \(image.size)")
     }
 }

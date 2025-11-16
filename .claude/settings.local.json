@@ -3,7 +3,9 @@
     "allow": [
       "Bash(tree:*)",
       "Bash(cat:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(open:*)"
     ],
     "deny": [],
     "ask": []

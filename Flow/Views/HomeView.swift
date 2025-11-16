@@ -35,6 +35,11 @@ struct HomeView: View {
                 BottomButtonsView(viewModel: viewModel)
                     .padding(.bottom, 40)
             }
+
+            // 加载指示器
+            if viewModel.isAnalyzing {
+                LoadingOverlayView()
+            }
         }
         .fullScreenCover(isPresented: $viewModel.showCamera) {
             CameraView(onImageCaptured: { image in
@@ -44,6 +49,12 @@ struct HomeView: View {
         .sheet(isPresented: $viewModel.showHistory) {
             HistoryView()
         }
+        .sheet(isPresented: $viewModel.showAnalysisResult) {
+            if let result = viewModel.analysisResult,
+               let image = viewModel.capturedImage {
+                FoodAnalysisView(analysisData: result, capturedImage: image)
+            }
+        }
         .alert("需要相机权限", isPresented: $viewModel.showPermissionAlert) {
             Button("前往设置") {
                 viewModel.openSettings()
@@ -51,6 +62,11 @@ struct HomeView: View {
             Button("取消", role: .cancel) {}
         } message: {
             Text("Flow 需要使用相机来识别您的食物。请在设置中允许访问相机。")
+        }
+        .alert("分析失败", isPresented: $viewModel.showError) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "未知错误")
         }
         .onChange(of: viewModel.selectedPhotoItem) { _, _ in
             Task {
@@ -69,46 +85,6 @@ struct HeaderView: View {
                 Text("今日健康")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.white)
-
-                // 健康货币进度
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("健康货币")
-                            .font(.system(size: 16))
-                            .foregroundColor(.white.opacity(0.8))
-
-                        Spacer()
-
-                        Text("剩余 1250")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color(red: 1.0, green: 0.8, blue: 0.2))
-                    }
-
-                    // 进度条
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            // 背景
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.white.opacity(0.15))
-                                .frame(height: 12)
-
-                            // 进度
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 1.0, green: 0.8, blue: 0.2),
-                                            Color(red: 1.0, green: 0.6, blue: 0.1)
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: geometry.size.width * 0.625, height: 12)
-                        }
-                    }
-                    .frame(height: 12)
-                }
             }
 
             Spacer()
@@ -246,6 +222,35 @@ struct HistoryView: View {
                     .foregroundColor(Color(red: 1.0, green: 0.7, blue: 0.2))
                 }
             }
+        }
+    }
+}
+
+// MARK: - Loading Overlay View
+struct LoadingOverlayView: View {
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+
+                Text("正在分析食物...")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(40)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white.opacity(0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
         }
     }
 }

@@ -11,19 +11,19 @@ import PhotosUI
 
 @Observable
 final class HomeViewModel {
-    var healthCoins: Int = 1250
     var selectedPhotoItem: PhotosPickerItem?
     var showCamera: Bool = false
     var showHistory: Bool = false
     var capturedImage: UIImage?
     var showPermissionAlert: Bool = false
+    var isAnalyzing: Bool = false
+    var analysisResult: FoodAnalysisData?
+    var showAnalysisResult: Bool = false
+    var errorMessage: String?
+    var showError: Bool = false
 
     let cameraManager = CameraManager()
-
-    // 计算健康货币的进度（假设最大值为 2000）
-    var healthProgress: Double {
-        Double(healthCoins) / 2000.0
-    }
+    let analysisService = FoodAnalysisService.shared
 
     // 处理从相册选择的照片
     func handlePhotoSelection() async {
@@ -62,18 +62,44 @@ final class HomeViewModel {
         capturedImage = image
         showCamera = false
 
-        // TODO: 处理拍摄的图片，进行食物识别
-        print("已拍摄照片，尺寸: \(image.size)")
+        // 开始分析图片
+        Task {
+            await analyzeImage(image)
+        }
+    }
+
+    // 分析图片
+    @MainActor
+    func analyzeImage(_ image: UIImage) async {
+        isAnalyzing = true
+        errorMessage = nil
+
+        do {
+            print("开始上传图片到 API...")
+            let result = try await analysisService.uploadImage(image)
+            print("API 返回成功: \(result.processedText)")
+
+            // 保存分析结果
+            analysisResult = result
+            isAnalyzing = false
+            showAnalysisResult = true
+
+        } catch let error as APIError {
+            print("API 错误: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+            isAnalyzing = false
+            showError = true
+
+        } catch {
+            print("未知错误: \(error.localizedDescription)")
+            errorMessage = "图片分析失败，请重试"
+            isAnalyzing = false
+            showError = true
+        }
     }
 
     // 显示历史记录
     func showHistoryView() {
         showHistory = true
-    }
-
-    // 计算今日总健康货币（可以从数据库查询）
-    func calculateDailyCoins() -> Int {
-        // TODO: 从 SwiftData 查询今日记录并计算
-        return healthCoins
     }
 }
