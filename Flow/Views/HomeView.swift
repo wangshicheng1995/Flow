@@ -10,58 +10,62 @@ import PhotosUI
 
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
+    @Environment(\.selectedTab) private var selectedTab
+    @State private var showCenterHint = false
+    @State private var hintDismissTask: Task<Void, Never>?
 
     var body: some View {
         ZStack {
-            // 背景颜色
-            Color(red: 0.11, green: 0.11, blue: 0.15)
-                .ignoresSafeArea()
+            // ========================
+            // 相机预览（全屏背景）
+            // ========================
+            CameraPreviewView(
+                capturedImage: .constant(nil),
+                onImageCaptured: { image in
+                    viewModel.handleCapturedImage(image)
+                }
+            )
+            .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                // 顶部标题栏
+            // ========================
+            // 顶部标题栏
+            // ========================
+            VStack {
                 HeaderView()
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
 
                 Spacer()
+            }
 
-                // 中间相机区域
-                CameraPlaceholderView()
-                    .padding(.horizontal, 32)
-
+            // ========================
+            // 底部按钮栏
+            // ========================
+            VStack {
                 Spacer()
 
-                // 底部按钮栏
                 BottomButtonsView(viewModel: viewModel)
                     .padding(.bottom, 40)
+            }
+
+            if showCenterHint {
+                Text("请将相机对准您的食物")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.black.opacity(0.55))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
             }
 
             // 加载指示器
             if viewModel.isAnalyzing {
                 LoadingOverlayView()
             }
-        }
-        .fullScreenCover(isPresented: $viewModel.showCamera) {
-            CameraView(onImageCaptured: { image in
-                viewModel.handleCapturedImage(image)
-            })
-        }
-        .sheet(isPresented: $viewModel.showHistory) {
-            HistoryView()
-        }
-        .sheet(isPresented: $viewModel.showAnalysisResult) {
-            if let result = viewModel.analysisResult,
-               let image = viewModel.capturedImage {
-                FoodAnalysisView(analysisData: result, capturedImage: image)
-            }
-        }
-        .alert("需要相机权限", isPresented: $viewModel.showPermissionAlert) {
-            Button("前往设置") {
-                viewModel.openSettings()
-            }
-            Button("取消", role: .cancel) {}
-        } message: {
-            Text("Flow 需要使用相机来识别您的食物。请在设置中允许访问相机。")
         }
         .alert("分析失败", isPresented: $viewModel.showError) {
             Button("确定", role: .cancel) {}
@@ -73,19 +77,49 @@ struct HomeView: View {
                 await viewModel.handlePhotoSelection()
             }
         }
+        .onAppear {
+            triggerCenterHint()
+        }
+        .onDisappear {
+            hintDismissTask?.cancel()
+            hintDismissTask = nil
+            showCenterHint = false
+        }
+        .onChange(of: selectedTab.wrappedValue) { _, newValue in
+            if newValue == .photo {
+                triggerCenterHint()
+            }
+        }
+        .onChange(of: viewModel.showAnalysisResult) { _, newValue in
+            if newValue {
+                // 分析完成，自动切换到 Analysis tab
+                selectedTab.wrappedValue = .analysis
+            }
+        }
+    }
+
+    @MainActor
+    private func triggerCenterHint() {
+        hintDismissTask?.cancel()
+        showCenterHint = true
+
+        hintDismissTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            withAnimation(.easeOut) {
+                showCenterHint = false
+            }
+        }
     }
 }
 
 // MARK: - Header View
 struct HeaderView: View {
     var body: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 16) {
-                // 标题
-                Text("今日健康")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.white)
-            }
+        HStack(alignment: .center) {
+            // 标题
+            Text("Flow")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.white)
 
             Spacer()
 
@@ -133,7 +167,7 @@ struct BottomButtonsView: View {
     @Bindable var viewModel: HomeViewModel
 
     var body: some View {
-        HStack(spacing: 32) {
+        HStack {
             // 从相册选择按钮
             PhotosPicker(
                 selection: $viewModel.selectedPhotoItem,
@@ -150,79 +184,9 @@ struct BottomButtonsView: View {
                 }
             }
 
-            // 拍照按钮（中间大按钮）
-            Button(action: {
-                Task {
-                    await viewModel.handleCameraButtonTap()
-                }
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(red: 1.0, green: 0.7, blue: 0.2),
-                                    Color(red: 1.0, green: 0.5, blue: 0.1)
-                                ]),
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 88, height: 88)
-
-                    Image(systemName: "fork.knife")
-                        .font(.system(size: 36, weight: .medium))
-                        .foregroundColor(.white)
-                }
-            }
-
-            // 历史记录按钮
-            Button(action: {
-                viewModel.showHistoryView()
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: 72, height: 72)
-
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white)
-                }
-            }
+            Spacer()
         }
-    }
-}
-
-// MARK: - History View (占位)
-struct HistoryView: View {
-    @Environment(\.dismiss) var dismiss
-
-    var body: some View {
-        NavigationView {
-            ZStack {
-                Color(red: 0.11, green: 0.11, blue: 0.15)
-                    .ignoresSafeArea()
-
-                VStack {
-                    Text("历史记录")
-                        .font(.title)
-                        .foregroundColor(.white)
-
-                    // TODO: 实现历史记录列表
-                }
-            }
-            .navigationTitle("历史回顾")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
-                    }
-                    .foregroundColor(Color(red: 1.0, green: 0.7, blue: 0.2))
-                }
-            }
-        }
+        .padding(.horizontal, 24)
     }
 }
 
