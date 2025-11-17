@@ -15,21 +15,15 @@ struct FoodAnalysisResponse: Codable {
 }
 
 struct FoodAnalysisData: Codable {
-    let taskId: String
-    let originalPrompt: String
-    let processedText: String  // 用户看的内容
+    let foodItems: [String]           // 识别出的食物列表
+    let confidence: Double             // 识别置信度
+    let isBalanced: Bool               // 是否营养均衡
+    let nutritionSummary: String       // 营养分析摘要
 
-    // 以下字段用于调试，可选
-    let summary: String?
-    let metadata: Metadata?
-    let processedAt: String?
+    // MARK: - 辅助计算属性
 
-    struct Metadata: Codable {
-        let fileName: String?
-        let mimeType: String?
-        let fileSize: Int?
-        let model: String?
-        let tokensUsed: Int?
-        let processingTimeMs: Int?
+    /// 将食物列表格式化为展示文本
+    var foodItemsText: String {
+        foodItems.joined(separator: "、")
     }
 }

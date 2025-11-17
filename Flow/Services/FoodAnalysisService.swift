@@ -34,7 +34,7 @@ enum APIError: Error {
 final class FoodAnalysisService {
     static let shared = FoodAnalysisService()
 
-    private let baseURL = "http://154.21.201.46:8080"
+    private let baseURL = "http://139.196.221.226:8080"
     private let uploadEndpoint = "/api/image/upload"
 
     private init() {}
@@ -101,9 +101,7 @@ final class FoodAnalysisService {
             }
 
             // 打印调试信息
-            if let metadata = analysisData.metadata {
-                print("📊 处理信息: 模型=\(metadata.model ?? "未知"), 耗时=\(metadata.processingTimeMs ?? 0)ms, tokens=\(metadata.tokensUsed ?? 0)")
-            }
+            print("📊 分析结果: 食物=\(analysisData.foodItemsText), 置信度=\(analysisData.confidence), 营养均衡=\(analysisData.isBalanced)")
 
             return analysisData
 
