@@ -86,9 +86,8 @@ final class FoodAnalysisService {
                 print("API 原始响应: \(jsonString)")
             }
 
-            // 解析响应（支持 snake_case 和 camelCase）
+            // 解析响应
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
             let apiResponse = try decoder.decode(FoodAnalysisResponse.self, from: data)
 
             // 检查业务状态码
@@ -101,7 +100,8 @@ final class FoodAnalysisService {
             }
 
             // 打印调试信息
-            print("📊 分析结果: 食物=\(analysisData.foodItemsText), 置信度=\(analysisData.confidence), 营养均衡=\(analysisData.isBalanced)")
+            let foodNames = analysisData.foods.map { $0.name }.joined(separator: ", ")
+            print("📊 分析结果: 食物=\(foodNames), 置信度=\(analysisData.confidence), 营养均衡=\(analysisData.isBalanced)")
 
             return analysisData
 

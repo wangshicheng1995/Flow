@@ -86,7 +86,7 @@ struct AnalysisHistoryView: View {
                     .navigationTitle("详情")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
+                        ToolbarItem(placement: .confirmationAction) {
                             Button("完成") {
                                 showDetail = false
                             }

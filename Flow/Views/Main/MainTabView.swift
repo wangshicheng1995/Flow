@@ -22,20 +22,20 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Label("Photo", systemImage: "camera")
+                    Label("拍照", systemImage: "camera")
                 }
                 .tag(AppTab.photo)
                 .environment(\.selectedTab, $selectedTab)
 
             AnalysisTabView()
                 .tabItem {
-                    Label("Analysis", systemImage: "chart.bar.doc.horizontal")
+                    Label("分析", systemImage: "chart.bar.doc.horizontal")
                 }
                 .tag(AppTab.analysis)
 
-            AnalysisHistoryView()
+            SummaryView()
                 .tabItem {
-                    Label("History", systemImage: "clock")
+                    Label("我的", systemImage: "person")
                 }
                 .tag(AppTab.history)
         }

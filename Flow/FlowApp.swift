@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct FlowApp: App {
+    @StateObject private var authManager = AuthenticationManager.shared
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -26,7 +28,12 @@ struct FlowApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            // 检查调试开关和认证状态
+            if AuthenticationManager.isAppleLoginEnabled && !authManager.isAuthenticated {
+                LoginView()
+            } else {
+                MainTabView()
+            }
         }
         .modelContainer(sharedModelContainer)
     }

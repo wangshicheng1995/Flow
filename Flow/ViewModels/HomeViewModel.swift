@@ -79,7 +79,7 @@ final class HomeViewModel {
         do {
             print("开始上传图片到 API...")
             let result = try await analysisService.uploadImage(image)
-            print("API 返回成功: \(result.foodItemsText)")
+            print("API 返回成功: \(result.foods.map { $0.name }.joined(separator: ", "))")
 
             // 保存分析结果到全局状态管理器
             analysisResult = result
