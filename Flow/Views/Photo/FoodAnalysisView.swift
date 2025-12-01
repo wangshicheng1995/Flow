@@ -26,7 +26,9 @@ struct FoodAnalysisView: View {
                         BodyImpactView()
                         
                         // Forecast Section
-                        ForecastView(impactAnalysis: analysisData.impactAnalysis)
+                        if let impact = analysisData.impact {
+                            ForecastView(impactAnalysis: impact)
+                        }
                         
                         Spacer(minLength: 40)
                     }
@@ -279,7 +281,9 @@ extension Color {
             confidence: 0.95,
             isBalanced: false,
             nutritionSummary: "A varied meal providing sustained energy, but be mindful of potential high sodium content.",
-            impactAnalysis: ImpactAnalysis(
+            overallEvaluation: nil,
+            impact: ImpactAnalysis(
+                primaryText: "Preview primary text",
                 shortTerm: "Energized and satiated, avoiding a post-meal slump.",
                 midTerm: "Feeling normal and refreshed, though slight thirst possible if sodium intake was high.",
                 longTerm: "Balanced diet contributes to long-term health.",
@@ -289,4 +293,3 @@ extension Color {
         capturedImage: foodImage
     )
 }
-

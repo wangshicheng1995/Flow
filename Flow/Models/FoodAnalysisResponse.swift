@@ -20,7 +20,8 @@ struct FoodAnalysisData: Codable {
     let confidence: Double
     let isBalanced: Bool
     let nutritionSummary: String
-    let impactAnalysis: ImpactAnalysis
+    let overallEvaluation: OverallEvaluation?
+    let impact: ImpactAnalysis?
     
     enum CodingKeys: String, CodingKey {
         case foods
@@ -28,7 +29,8 @@ struct FoodAnalysisData: Codable {
         case confidence
         case isBalanced
         case nutritionSummary
-        case impactAnalysis = "impact_analysis"
+        case overallEvaluation
+        case impact
     }
 }
 
@@ -67,16 +69,17 @@ struct Nutrition: Codable {
 }
 
 struct ImpactAnalysis: Codable {
+    let primaryText: String?
     let shortTerm: String
     let midTerm: String
     let longTerm: String
     let riskTags: [String]
-    
-    enum CodingKeys: String, CodingKey {
-        case shortTerm = "short_term"
-        case midTerm = "mid_term"
-        case longTerm = "long_term"
-        case riskTags = "risk_tags"
-    }
 }
 
+struct OverallEvaluation: Codable {
+    let aiIsBalanced: Bool?
+    let riskLevel: String?
+    let impactStrategy: String?
+    let overallScore: Int?
+    let tagSummaries: [String]?
+}

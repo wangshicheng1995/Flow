@@ -2,48 +2,192 @@
 //  CameraView.swift
 //  Flow
 //
-//  Created on 2025-11-05.
+//  主拍照页面：相机预览 + 相册入口 + 上传分析
 //
 
 import SwiftUI
+import PhotosUI
 import AVFoundation
 
-// MARK: - Camera View
+// MARK: - 主拍照视图
 struct CameraView: View {
-    @Environment(\.dismiss) var dismiss
-    @State private var capturedImage: UIImage?
-    let onImageCaptured: (UIImage) -> Void
+    @State private var viewModel = HomeViewModel()
+    @Environment(\.selectedTab) private var selectedTab
+    @State private var showCenterHint = false
+    @State private var hintDismissTask: Task<Void, Never>?
+    @EnvironmentObject private var stressScoreViewModel: StressScoreViewModel
 
     var body: some View {
         ZStack {
-            // 相机预览
-            CameraPreviewView(capturedImage: $capturedImage, onImageCaptured: onImageCaptured)
-                .ignoresSafeArea()
-
-            // 顶部关闭按钮
-            VStack {
-                HStack {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.black.opacity(0.5))
-                                .frame(width: 44, height: 44)
-
-                            Image(systemName: "xmark")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .padding(.leading, 20)
-                    .padding(.top, 20)
-
-                    Spacer()
+            CameraPreviewView(
+                capturedImage: .constant(nil),
+                onImageCaptured: { image in
+                    viewModel.handleCapturedImage(image)
                 }
+            )
+            .ignoresSafeArea()
+
+            VStack {
+                HeaderView()
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
 
                 Spacer()
             }
+
+            VStack {
+                Spacer()
+
+                BottomButtonsView(viewModel: viewModel)
+                    .padding(.bottom, 40)
+            }
+
+            if showCenterHint {
+                Text("请将相机对准您的食物")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.black.opacity(0.55))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            }
+
+            if viewModel.isAnalyzing {
+                LoadingOverlayView()
+            }
+        }
+        .alert("分析失败", isPresented: $viewModel.showError) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "未知错误")
+        }
+        .fullScreenCover(isPresented: $viewModel.showAnalysisResult) {
+            if let analysis = viewModel.analysisResult, let image = viewModel.capturedImage {
+                FoodAnalysisView(analysisData: analysis, capturedImage: image)
+            } else {
+                Text("未找到分析结果")
+                    .font(.headline)
+                    .padding()
+            }
+        }
+        .onChange(of: viewModel.selectedPhotoItem) { _, _ in
+            Task {
+                await viewModel.handlePhotoSelection()
+            }
+        }
+        .onAppear {
+            viewModel.stressScoreRefresher = {
+                await stressScoreViewModel.refreshScore()
+            }
+            triggerCenterHint()
+        }
+        .onDisappear {
+            hintDismissTask?.cancel()
+            hintDismissTask = nil
+            showCenterHint = false
+        }
+        .onChange(of: selectedTab.wrappedValue) { _, newValue in
+            if newValue == .camera {
+                triggerCenterHint()
+            }
+        }
+    }
+
+    @MainActor
+    private func triggerCenterHint() {
+        hintDismissTask?.cancel()
+        showCenterHint = true
+
+        hintDismissTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            withAnimation(.easeOut) {
+                showCenterHint = false
+            }
+        }
+    }
+}
+
+// MARK: - Header View
+private struct HeaderView: View {
+    var body: some View {
+        HStack(alignment: .center) {
+            Text("Flow")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.white)
+
+            Spacer()
+
+            Button(action: {}) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 56, height: 56)
+
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 相册入口
+private struct BottomButtonsView: View {
+    @Bindable var viewModel: HomeViewModel
+
+    var body: some View {
+        HStack {
+            PhotosPicker(
+                selection: $viewModel.selectedPhotoItem,
+                matching: .images
+            ) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.12))
+                        .frame(width: 72, height: 72)
+
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+// MARK: - Loading Overlay View
+private struct LoadingOverlayView: View {
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+
+                Text("正在分析食物...")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+            }
+            .padding(40)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white.opacity(0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
         }
     }
 }
@@ -127,21 +271,18 @@ class CameraViewController: UIViewController {
     }
 
     private func setupCamera() {
-        // 配置使用串行队列，避免 start/stop 与配置竞争
         sessionQueue.async { [weak self] in
             guard let self = self else { return }
 
             self.captureSession.beginConfiguration()
             self.captureSession.sessionPreset = .photo
 
-            // 获取后置摄像头
             guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
                 print("❌ 无法获取摄像头")
                 self.captureSession.commitConfiguration()
                 return
             }
 
-            // 创建输入
             guard let input = try? AVCaptureDeviceInput(device: camera) else {
                 print("❌ 无法创建摄像头输入")
                 self.captureSession.commitConfiguration()
@@ -156,7 +297,6 @@ class CameraViewController: UIViewController {
 
             self.captureSession.addInput(input)
 
-            // 创建照片输出
             let output = AVCapturePhotoOutput()
             guard self.captureSession.canAddOutput(output) else {
                 print("❌ 无法添加照片输出")
@@ -170,7 +310,6 @@ class CameraViewController: UIViewController {
             self.photoOutput = output
             self.isSessionConfigured = true
 
-            // 在主线程添加预览图层
             DispatchQueue.main.async {
                 if self.previewLayer == nil {
                     let previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
@@ -192,11 +331,9 @@ class CameraViewController: UIViewController {
     }
 
     private func setupCaptureButton() {
-        // 创建拍照按钮
         captureButton = UIButton(type: .system)
         captureButton.translatesAutoresizingMaskIntoConstraints = false
 
-        // 外圈白色圆环
         let outerCircle = UIView()
         outerCircle.translatesAutoresizingMaskIntoConstraints = false
         outerCircle.backgroundColor = .clear
@@ -205,7 +342,6 @@ class CameraViewController: UIViewController {
         outerCircle.layer.cornerRadius = 40
         outerCircle.isUserInteractionEnabled = false
 
-        // 内圈白色实心圆
         let innerCircle = UIView()
         innerCircle.translatesAutoresizingMaskIntoConstraints = false
         innerCircle.backgroundColor = .white
@@ -234,7 +370,7 @@ class CameraViewController: UIViewController {
         ])
 
         captureButton.addTarget(self, action: #selector(capturePhoto), for: .touchUpInside)
-        
+
         print("✅ 拍照按钮已设置")
     }
 
@@ -243,11 +379,11 @@ class CameraViewController: UIViewController {
             print("❌ 照片输出未初始化")
             return
         }
-        
+
         let settings = AVCapturePhotoSettings()
         settings.flashMode = .auto
         photoOutput.capturePhoto(with: settings, delegate: self)
-        
+
         print("📸 开始拍照")
     }
 
@@ -293,7 +429,6 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
 
 // MARK: - Preview
 #Preview {
-    CameraView { image in
-        print("Preview: 捕获图片，尺寸: \(image.size)")
-    }
+    CameraView()
+        .environmentObject(StressScoreViewModel())
 }

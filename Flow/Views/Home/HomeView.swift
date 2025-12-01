@@ -2,224 +2,231 @@
 //  HomeView.swift
 //  Flow
 //
-//  Created on 2025-11-05.
+//  Created on 2025-11-25.
 //
 
 import SwiftUI
-import PhotosUI
 
 struct HomeView: View {
-    @State private var viewModel = HomeViewModel()
-    @Environment(\.selectedTab) private var selectedTab
-    @State private var showCenterHint = false
-    @State private var hintDismissTask: Task<Void, Never>?
+    @ObservedObject var authManager = AuthenticationManager.shared
+    @EnvironmentObject var stressScoreViewModel: StressScoreViewModel
 
     var body: some View {
-        ZStack {
-            // ========================
-            // 相机预览（全屏背景）
-            // ========================
-            CameraPreviewView(
-                capturedImage: .constant(nil),
-                onImageCaptured: { image in
-                    viewModel.handleCapturedImage(image)
-                }
-            )
-            .ignoresSafeArea()
-
-            // ========================
-            // 顶部标题栏
-            // ========================
-            VStack {
-                HeaderView()
-                    .padding(.horizontal, 24)
-                    .padding(.top, 20)
-
-                Spacer()
-            }
-
-            // ========================
-            // 底部按钮栏
-            // ========================
-            VStack {
-                Spacer()
-
-                BottomButtonsView(viewModel: viewModel)
-                    .padding(.bottom, 40)
-            }
-
-            if showCenterHint {
-                Text("请将相机对准您的食物")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.black.opacity(0.55))
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        ScrollView {
+            VStack(spacing: 0) {
+                // MARK: - Banner Section
+                ZStack(alignment: .bottom) {
+                    Image("banner")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 400) // Adjust height as needed
+                        .clipped()
+                    
+                    // Gradient Mask
+                    LinearGradient(
+                        colors: [.clear, .white],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-            }
-
-            // 加载指示器
-            if viewModel.isAnalyzing {
-                LoadingOverlayView()
-            }
-        }
-        .alert("分析失败", isPresented: $viewModel.showError) {
-            Button("确定", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "未知错误")
-        }
-        .onChange(of: viewModel.selectedPhotoItem) { _, _ in
-            Task {
-                await viewModel.handlePhotoSelection()
-            }
-        }
-        .onAppear {
-            triggerCenterHint()
-        }
-        .onDisappear {
-            hintDismissTask?.cancel()
-            hintDismissTask = nil
-            showCenterHint = false
-        }
-        .onChange(of: selectedTab.wrappedValue) { _, newValue in
-            if newValue == .photo {
-                triggerCenterHint()
-            }
-        }
-        .onChange(of: viewModel.showAnalysisResult) { _, newValue in
-            if newValue {
-                // 分析完成，自动切换到 Analysis tab
-                selectedTab.wrappedValue = .analysis
-            }
-        }
-    }
-
-    @MainActor
-    private func triggerCenterHint() {
-        hintDismissTask?.cancel()
-        showCenterHint = true
-
-        hintDismissTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            withAnimation(.easeOut) {
-                showCenterHint = false
-            }
-        }
-    }
-}
-
-// MARK: - Header View
-struct HeaderView: View {
-    var body: some View {
-        HStack(alignment: .center) {
-            // 标题
-            Text("Flow")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.white)
-
-            Spacer()
-
-            // 用户头像按钮
-            Button(action: {
-                // 跳转到用户资料页面
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(width: 56, height: 56)
-
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.white)
+                    .frame(height: 120) // Occupy bottom 20-30%
                 }
+                .ignoresSafeArea(.all, edges: .top)
+                
+                // MARK: - Content Section
+                VStack(alignment: .leading, spacing: 24) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("嗨, \(authManager.userGivenName)")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        
+                        Text("Flow 吃出健康")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.black)
+                        
+                        if let quote = QuoteManager.shared.dailyQuote {
+                            Text("\(quote.text) ——《\(quote.bookTitle)》")
+                                .font(.body)
+                                .foregroundColor(.gray)
+                                .lineSpacing(4)
+                        } else {
+                            Text("运动是增肌和发育的绝佳方式。然而，肌肉也需要时间来恢复。在此期间，你的身体会修复训练中可能产生的微小撕裂。")
+                                .font(.body)
+                                .foregroundColor(.gray)
+                                .lineSpacing(4)
+                        }
+                    }
+                    
+                    // Status Bar
+                    StressStatusBar(score: Double(stressScoreViewModel.currentScore))
+                        .frame(height: 26)
+                        .frame(maxWidth: .infinity)
+                    
+                    // Recommendations
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("今日建议")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                        
+                        HStack(spacing: 12) {
+                            RecommendationChip(icon: "bed.double.fill", title: "休息", color: .green)
+                            RecommendationChip(icon: "figure.walk", title: "主动恢复", color: .green)
+                        }
+                    }
+                    
+                    // Wellness
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("健康状况")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                            Spacer()
+                            Button(action: {}) {
+                                Image(systemName: "square.grid.2x2")
+                                    .foregroundColor(.black)
+                                    .padding(8)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            }
+                        }
+                        
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
+                            WellnessCard(title: "步数", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
+                            WellnessCard(title: "睡眠", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
+                            WellnessCard(title: "心率", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("健康状况")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                            Spacer()
+                            Button(action: {}) {
+                                Image(systemName: "square.grid.2x2")
+                                    .foregroundColor(.black)
+                                    .padding(8)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            }
+                        }
+                        
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
+                            WellnessCard(title: "步数", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
+                            WellnessCard(title: "睡眠", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
+                            WellnessCard(title: "心率", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("健康状况")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                            Spacer()
+                            Button(action: {}) {
+                                Image(systemName: "square.grid.2x2")
+                                    .foregroundColor(.black)
+                                    .padding(8)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            }
+                        }
+                        
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
+                            WellnessCard(title: "步数", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
+                            WellnessCard(title: "睡眠", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
+                            WellnessCard(title: "心率", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, -40) // Pull content up slightly if needed, or let gradient handle blend
+                .background(Color.white) // Ensure background is white below banner
             }
         }
-    }
-}
-
-// MARK: - Camera Placeholder View
-struct CameraPlaceholderView: View {
-    var body: some View {
-        ZStack {
-            // 背景卡片
-            RoundedRectangle(cornerRadius: 32)
-                .fill(Color.white.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 32)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-
-            // 提示文字
-            Text("将相机对准您的食物")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
+        .background(Color.white)
+        .ignoresSafeArea(.container, edges: .top)
+        .task {
+            await stressScoreViewModel.refreshScore()
         }
-        .frame(height: 400)
     }
 }
 
-// MARK: - Bottom Buttons View
-struct BottomButtonsView: View {
-    @Bindable var viewModel: HomeViewModel
-
+struct RecommendationChip: View {
+    let icon: String
+    let title: String
+    let color: Color
+    
     var body: some View {
         HStack {
-            // 从相册选择按钮
-            PhotosPicker(
-                selection: $viewModel.selectedPhotoItem,
-                matching: .images
-            ) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.12))
-                        .frame(width: 72, height: 72)
+            Image(systemName: icon)
+                .foregroundColor(color)
+            Text(title)
+                .foregroundColor(.black)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(24)
+    }
+}
 
-                    Image(systemName: "photo.on.rectangle")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white)
+struct WellnessCard: View {
+    let title: String
+    let icon: String?
+    let value: String?
+    let unit: String?
+    let isPromo: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.black)
+                    .multilineTextAlignment(.leading)
+                Spacer()
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .foregroundColor(.gray)
                 }
             }
-
+            
             Spacer()
-        }
-        .padding(.horizontal, 24)
-    }
-}
-
-// MARK: - Loading Overlay View
-struct LoadingOverlayView: View {
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-
-            VStack(spacing: 20) {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    .scaleEffect(1.5)
-
-                Text("正在分析食物...")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+            
+            if !isPromo {
+                HStack(alignment: .lastTextBaseline, spacing: 4) {
+                    Text(value ?? "")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Text(unit ?? "")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            } else {
+                Image(systemName: "arrow.right")
+                    .foregroundColor(.gray)
             }
-            .padding(40)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.15))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-            )
         }
+        .padding(16)
+        .frame(height: 140)
+        .background(Color.white)
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
     }
 }
 
-// MARK: - Preview
 #Preview {
     HomeView()
+        .environmentObject(StressScoreViewModel())
 }

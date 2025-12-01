@@ -6,45 +6,51 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Tab 选择枚举
 enum AppTab: Int, Hashable {
-    case photo = 0
-    case analysis = 1
+    case today = 0
+    case camera = 1
     case history = 2
 }
 
 // MARK: - 主导航容器视图
 struct MainTabView: View {
-    @State private var selectedTab: AppTab = .photo
+    @State private var selectedTab: AppTab = .today
+    @StateObject private var stressScoreViewModel = StressScoreViewModel()
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView()
-                .tabItem {
-                    Label("拍照", systemImage: "camera")
-                }
-                .tag(AppTab.photo)
-                .environment(\.selectedTab, $selectedTab)
+            Tab(value: AppTab.today) {
+                HomeView()
+                    .environment(\.selectedTab, $selectedTab)
+                    .environmentObject(stressScoreViewModel)
+            } label: {
+                Label("今日", systemImage: "sun.max")
+            }
 
-            AnalysisTabView()
-                .tabItem {
-                    Label("分析", systemImage: "chart.bar.doc.horizontal")
-                }
-                .tag(AppTab.analysis)
+            Tab(value: AppTab.camera) {
+                CameraView()
+                    .environment(\.selectedTab, $selectedTab)
+                    .environmentObject(stressScoreViewModel)
+            } label: {
+                Label("拍照", systemImage: "camera")
+            }
 
-            SummaryView()
-                .tabItem {
-                    Label("我的", systemImage: "person")
-                }
-                .tag(AppTab.history)
+            Tab(value: AppTab.history) {
+                SummaryView()
+            } label: {
+                Label("我的", systemImage: "person")
+            }
         }
+        .tabBarMinimizeBehavior(.onScrollDown)
     }
 }
 
 // MARK: - 环境值：Tab 选择
 private struct SelectedTabKey: EnvironmentKey {
-    static let defaultValue: Binding<AppTab> = .constant(.photo)
+    static let defaultValue: Binding<AppTab> = .constant(.today)
 }
 
 extension EnvironmentValues {

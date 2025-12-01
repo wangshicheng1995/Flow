@@ -18,9 +18,9 @@ final class HomeViewModel {
     var showAnalysisResult: Bool = false
     var errorMessage: String?
     var showError: Bool = false
+    var stressScoreRefresher: (() async -> Void)?
 
     let analysisService = FoodAnalysisService.shared
-    let analysisStateManager = AnalysisStateManager.shared
 
     // 处理从相册选择的照片
     func handlePhotoSelection() async {
@@ -81,11 +81,15 @@ final class HomeViewModel {
             let result = try await analysisService.uploadImage(image)
             print("API 返回成功: \(result.foods.map { $0.name }.joined(separator: ", "))")
 
-            // 保存分析结果到全局状态管理器
             analysisResult = result
-            analysisStateManager.updateAnalysisResult(data: result, image: image)
             isAnalyzing = false
             showAnalysisResult = true
+
+            if let refresher = stressScoreRefresher {
+                Task {
+                    await refresher()
+                }
+            }
 
         } catch let error as APIError {
             print("API 错误: \(error.localizedDescription)")
