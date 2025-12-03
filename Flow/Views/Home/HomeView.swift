@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var authManager = AuthenticationManager.shared
     @EnvironmentObject var stressScoreViewModel: StressScoreViewModel
+    @State private var isShowingStressSheet = false
 
     var body: some View {
         ScrollView {
@@ -24,7 +25,7 @@ struct HomeView: View {
                     
                     // Gradient Mask
                     LinearGradient(
-                        colors: [.clear, .white],
+                        colors: [.clear, Color(.systemBackground)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -38,22 +39,22 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("嗨, \(authManager.userGivenName)")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundStyle(.secondary)
                         
-                        Text("Flow 吃出健康")
+                        Text("Flow 吃的健康")
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.black)
+                            .foregroundStyle(.primary)
                         
                         if let quote = QuoteManager.shared.dailyQuote {
                             Text("\(quote.text) ——《\(quote.bookTitle)》")
                                 .font(.body)
-                                .foregroundColor(.gray)
+                                .foregroundStyle(.secondary)
                                 .lineSpacing(4)
                         } else {
                             Text("运动是增肌和发育的绝佳方式。然而，肌肉也需要时间来恢复。在此期间，你的身体会修复训练中可能产生的微小撕裂。")
                                 .font(.body)
-                                .foregroundColor(.gray)
+                                .foregroundStyle(.secondary)
                                 .lineSpacing(4)
                         }
                     }
@@ -62,18 +63,14 @@ struct HomeView: View {
                     StressStatusBar(score: Double(stressScoreViewModel.currentScore))
                         .frame(height: 26)
                         .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            isShowingStressSheet = true
+                        }
+                        .sensoryFeedback(.selection, trigger: isShowingStressSheet)
                     
                     // Recommendations
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("今日建议")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                        
-                        HStack(spacing: 12) {
-                            RecommendationChip(icon: "bed.double.fill", title: "休息", color: .green)
-                            RecommendationChip(icon: "figure.walk", title: "主动恢复", color: .green)
-                        }
-                    }
+                    RecommendationsSection()
                     
                     // Wellness
                     VStack(alignment: .leading, spacing: 16) {
@@ -84,11 +81,11 @@ struct HomeView: View {
                             Spacer()
                             Button(action: {}) {
                                 Image(systemName: "square.grid.2x2")
-                                    .foregroundColor(.black)
+                                    .foregroundStyle(.primary)
                                     .padding(8)
-                                    .background(Color.white)
+                                    .background(Color(.secondarySystemBackground))
                                     .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                             }
                         }
                         
@@ -108,11 +105,11 @@ struct HomeView: View {
                             Spacer()
                             Button(action: {}) {
                                 Image(systemName: "square.grid.2x2")
-                                    .foregroundColor(.black)
+                                    .foregroundStyle(.primary)
                                     .padding(8)
-                                    .background(Color.white)
+                                    .background(Color(.secondarySystemBackground))
                                     .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                             }
                         }
                         
@@ -132,11 +129,11 @@ struct HomeView: View {
                             Spacer()
                             Button(action: {}) {
                                 Image(systemName: "square.grid.2x2")
-                                    .foregroundColor(.black)
+                                    .foregroundStyle(.primary)
                                     .padding(8)
-                                    .background(Color.white)
+                                    .background(Color(.secondarySystemBackground))
                                     .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                             }
                         }
                         
@@ -150,33 +147,20 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, -40) // Pull content up slightly if needed, or let gradient handle blend
-                .background(Color.white) // Ensure background is white below banner
+                .background(Color(.systemBackground)) // Ensure background adapts to theme
             }
         }
-        .background(Color.white)
+        .background(Color(.systemBackground))
         .ignoresSafeArea(.container, edges: .top)
+        .sheet(isPresented: $isShowingStressSheet) {
+            StressStatusSheet(score: stressScoreViewModel.currentScore)
+                .presentationDetents([.fraction(1)])
+                .presentationDragIndicator(.hidden)
+                .presentationCornerRadius(28)
+        }
         .task {
             await stressScoreViewModel.refreshScore()
         }
-    }
-}
-
-struct RecommendationChip: View {
-    let icon: String
-    let title: String
-    let color: Color
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(color)
-            Text(title)
-                .foregroundColor(.black)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(24)
     }
 }
 
@@ -193,12 +177,12 @@ struct WellnessCard: View {
                 Text(title)
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(.black)
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
                 Spacer()
                 if let icon = icon {
                     Image(systemName: icon)
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -215,12 +199,12 @@ struct WellnessCard: View {
                 }
             } else {
                 Image(systemName: "arrow.right")
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(16)
         .frame(height: 140)
-        .background(Color.white)
+        .background(Color(.secondarySystemBackground))
         .cornerRadius(20)
         .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
     }

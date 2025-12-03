@@ -39,12 +39,13 @@ struct MainTabView: View {
             }
 
             Tab(value: AppTab.history) {
-                SummaryView()
+                MyView()
             } label: {
                 Label("我的", systemImage: "person")
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
+        .sensoryFeedback(.selection, trigger: selectedTab)
     }
 }
 

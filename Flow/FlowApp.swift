@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct FlowApp: App {
     @StateObject private var authManager = AuthenticationManager.shared
+    @AppStorage(ThemePreference.storageKey) private var storedThemePreference = ThemePreference.system.rawValue
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -26,14 +27,21 @@ struct FlowApp: App {
         }
     }()
 
+    private var themePreference: ThemePreference {
+        ThemePreference.resolve(storedThemePreference)
+    }
+
     var body: some Scene {
         WindowGroup {
             // 检查调试开关和认证状态
-            if AuthenticationManager.isAppleLoginEnabled && !authManager.isAuthenticated {
-                LoginView()
-            } else {
-                MainTabView()
+            Group {
+                if AuthenticationManager.isAppleLoginEnabled && !authManager.isAuthenticated {
+                    LoginView()
+                } else {
+                    MainTabView()
+                }
             }
+            .preferredColorScheme(themePreference.colorScheme)
         }
         .modelContainer(sharedModelContainer)
     }
