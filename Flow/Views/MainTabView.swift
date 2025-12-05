@@ -45,7 +45,6 @@ struct MainTabView: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
-        .sensoryFeedback(.selection, trigger: selectedTab)
     }
 }
 

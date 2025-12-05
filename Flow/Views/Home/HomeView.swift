@@ -9,28 +9,49 @@ import SwiftUI
 
 struct HomeView: View {
     @ObservedObject var authManager = AuthenticationManager.shared
+    @ObservedObject var bannerManager = BannerManager.shared
     @EnvironmentObject var stressScoreViewModel: StressScoreViewModel
     @State private var isShowingStressSheet = false
+    @State private var isShowingGlycemicLoad = false
+    @State private var isShowingCalorieIntake = false
+    @State private var isShowingHighQualityProtein = false
+    
+    // MARK: - Banner 布局调节参数
+    /// Banner 显示区域的高度 - 调小此值可以让 banner 更矮，类似 Gentler Streak 的效果
+    private let bannerHeight: CGFloat = 280
+    /// 图片垂直偏移 - 正值向下移动（显示图片上半部分），负值向上移动（显示图片下半部分）
+    private let bannerImageOffset: CGFloat = 60
+    /// 内容区域与 banner 的间距 - 正值增加空白，负值让内容上移覆盖部分 banner
+    private let contentTopSpacing: CGFloat = 12
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
                 // MARK: - Banner Section
                 ZStack(alignment: .bottom) {
-                    Image("banner")
+                    Image(bannerManager.dailyBannerName)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(height: 400) // Adjust height as needed
+                        .offset(y: bannerImageOffset)
+                        .frame(height: bannerHeight)
                         .clipped()
                     
-                    // Gradient Mask
+                    // Gradient Mask - 渐变过渡效果
                     LinearGradient(
                         colors: [.clear, Color(.systemBackground)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .frame(height: 120) // Occupy bottom 20-30%
+                    .frame(height: bannerHeight * 0.35) // 渐变区域占 banner 高度的 35%
                 }
+                .contentShape(Rectangle()) // 确保整个区域可点击
+                .onTapGesture {
+                    if BannerManager.enableTapToChangeBanner {
+                        bannerManager.randomizeBanner()
+                    }
+                }
+                .sensoryFeedback(.impact(flexibility: .soft), trigger: bannerManager.dailyBannerName)
                 .ignoresSafeArea(.all, edges: .top)
                 
                 // MARK: - Content Section
@@ -39,10 +60,10 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("嗨, \(authManager.userGivenName)")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                         
                         Text("Flow 吃的健康")
-                            .font(.largeTitle)
+                            .font(.title)
                             .fontWeight(.bold)
                             .foregroundStyle(.primary)
                         
@@ -75,7 +96,7 @@ struct HomeView: View {
                     // Wellness
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text("健康状况")
+                            Text("今日饮食")
                                 .font(.title3)
                                 .fontWeight(.bold)
                             Spacer()
@@ -91,76 +112,56 @@ struct HomeView: View {
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                             WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
-                            WellnessCard(title: "步数", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
-                            WellnessCard(title: "睡眠", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
-                            WellnessCard(title: "心率", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
-                        }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("健康状况")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            Spacer()
-                            Button(action: {}) {
-                                Image(systemName: "square.grid.2x2")
-                                    .foregroundStyle(.primary)
-                                    .padding(8)
-                                    .background(Color(.secondarySystemBackground))
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
-                            }
-                        }
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                            WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
-                            WellnessCard(title: "步数", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
-                            WellnessCard(title: "睡眠", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
-                            WellnessCard(title: "心率", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
-                        }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("健康状况")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            Spacer()
-                            Button(action: {}) {
-                                Image(systemName: "square.grid.2x2")
-                                    .foregroundStyle(.primary)
-                                    .padding(8)
-                                    .background(Color(.secondarySystemBackground))
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
-                            }
-                        }
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                            WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
-                            WellnessCard(title: "步数", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
-                            WellnessCard(title: "睡眠", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
-                            WellnessCard(title: "心率", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
+                            
+                            // 总热量卡片 - 点击进入 CalorieIntakeView
+                            WellnessCard(title: "总热量", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    isShowingCalorieIntake = true
+                                }
+                            
+                            // 优质蛋白卡片 - 点击进入 HighQualityProteinView
+                            WellnessCard(title: "优质蛋白", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    isShowingHighQualityProtein = true
+                                }
+
+                            // 糖负荷卡片 - 点击进入 GlycemicLoadView
+                            WellnessCard(title: "糖负荷", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    isShowingGlycemicLoad = true
+                                }
                         }
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, -40) // Pull content up slightly if needed, or let gradient handle blend
+                .padding(.top, contentTopSpacing)
                 .background(Color(.systemBackground)) // Ensure background adapts to theme
+            } // Content VStack
+            } // ScrollView
+            .background(Color(.systemBackground))
+            .ignoresSafeArea(.container, edges: .top)
+            .sheet(isPresented: $isShowingStressSheet) {
+                StressStatusSheet(score: stressScoreViewModel.currentScore)
+                    .presentationDetents([.fraction(1)])
+                    .presentationDragIndicator(.hidden)
+                    .presentationCornerRadius(28)
             }
-        }
-        .background(Color(.systemBackground))
-        .ignoresSafeArea(.container, edges: .top)
-        .sheet(isPresented: $isShowingStressSheet) {
-            StressStatusSheet(score: stressScoreViewModel.currentScore)
-                .presentationDetents([.fraction(1)])
-                .presentationDragIndicator(.hidden)
-                .presentationCornerRadius(28)
-        }
-        .task {
-            await stressScoreViewModel.refreshScore()
-        }
+            .navigationDestination(isPresented: $isShowingGlycemicLoad) {
+                GlycemicLoadView()
+            }
+            .navigationDestination(isPresented: $isShowingCalorieIntake) {
+                CalorieIntakeView()
+            }
+            .navigationDestination(isPresented: $isShowingHighQualityProtein) {
+                HighQualityProteinView()
+            }
+            .task {
+                await stressScoreViewModel.refreshScore()
+            }
+        } // NavigationStack
     }
 }
 
