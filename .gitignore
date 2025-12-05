@@ -1,0 +1,10 @@
+# Xcode / Swift 常见忽略
+DerivedData/
+build/
+*.xcworkspace/xcuserdata/
+*.xcuserdata/
+*.xcuserstate
+*.DS_Store
+
+# 看团队习惯再决定要不要忽略 Pods
+# Pods/
