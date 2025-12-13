@@ -3,7 +3,6 @@ import Foundation
 struct Quote: Codable, Identifiable {
     let id: Int
     let text: String
-    let bookTitle: String
 }
 
 class QuoteManager: ObservableObject {

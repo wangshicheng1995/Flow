@@ -34,16 +34,19 @@ enum APIError: Error {
 final class FoodAnalysisService {
     static let shared = FoodAnalysisService()
 
-    private let baseURL = "http://139.196.221.226:8080"
-    private let uploadEndpoint = "/api/image/upload"
-
     private init() {}
 
     // 上传图片并获取分析结果
     func uploadImage(_ image: UIImage) async throws -> FoodAnalysisData {
         // 构建 URL
-        guard let url = URL(string: baseURL + uploadEndpoint) else {
+        guard let url = APIEndpoints.uploadImage.url else {
             throw APIError.invalidURL
+        }
+
+        // 获取当前用户 ID
+        let userId = AuthenticationManager.shared.userIdentifier
+        if APIConfig.enableDebugLog {
+            print("📤 上传图片，userId: \(userId)")
         }
 
         // 压缩图片为 JPEG 格式
@@ -61,10 +64,11 @@ final class FoodAnalysisService {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-        // 构建 multipart body
+        // 构建 multipart body（包含 userId 和 file）
         let httpBody = createMultipartBody(
             boundary: boundary,
-            data: imageData,
+            userId: userId,
+            imageData: imageData,
             mimeType: "image/jpeg",
             filename: filename
         )
@@ -103,6 +107,11 @@ final class FoodAnalysisService {
             let foodNames = analysisData.foods.map { $0.name }.joined(separator: ", ")
             print("📊 分析结果: 食物=\(foodNames), 置信度=\(analysisData.confidence), 营养均衡=\(analysisData.isBalanced)")
 
+            // 发送上传成功通知，通知首页刷新数据
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .didUploadFood, object: nil)
+            }
+
             return analysisData
 
         } catch let error as DecodingError {
@@ -114,20 +123,26 @@ final class FoodAnalysisService {
         }
     }
 
-    // 创建 multipart/form-data body
+    // 创建 multipart/form-data body（包含 userId 和图片文件）
     private func createMultipartBody(
         boundary: String,
-        data: Data,
+        userId: String,
+        imageData: Data,
         mimeType: String,
         filename: String
     ) -> Data {
         var body = Data()
 
+        // 添加 userId 字段
+        body.append("--\(boundary)\r\n")
+        body.append("Content-Disposition: form-data; name=\"userId\"\r\n\r\n")
+        body.append("\(userId)\r\n")
+
         // 添加文件字段
         body.append("--\(boundary)\r\n")
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n")
         body.append("Content-Type: \(mimeType)\r\n\r\n")
-        body.append(data)
+        body.append(imageData)
         body.append("\r\n")
 
         // 结束标记

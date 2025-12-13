@@ -10,7 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var authManager = AuthenticationManager.shared
     @ObservedObject var bannerManager = BannerManager.shared
-    @EnvironmentObject var stressScoreViewModel: StressScoreViewModel
+    @EnvironmentObject var homeDataViewModel: HomeDataViewModel
     @State private var isShowingStressSheet = false
     @State private var isShowingGlycemicLoad = false
     @State private var isShowingCalorieIntake = false
@@ -57,31 +57,30 @@ struct HomeView: View {
                 // MARK: - Content Section
                 VStack(alignment: .leading, spacing: 24) {
                     // Header
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text("嗨, \(authManager.userGivenName)")
-                            .font(.subheadline)
+                            .font(.headline)
                             .foregroundStyle(.primary)
                         
-                        Text("Flow 吃的健康")
+                        Text("你的身体是你吃出来的")
                             .font(.title)
                             .fontWeight(.bold)
                             .foregroundStyle(.primary)
                         
                         if let quote = QuoteManager.shared.dailyQuote {
-                            Text("\(quote.text) ——《\(quote.bookTitle)》")
+                            Text(quote.text)
                                 .font(.body)
-                                .foregroundStyle(.secondary)
-                                .lineSpacing(4)
-                        } else {
-                            Text("运动是增肌和发育的绝佳方式。然而，肌肉也需要时间来恢复。在此期间，你的身体会修复训练中可能产生的微小撕裂。")
-                                .font(.body)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.primary)
                                 .lineSpacing(4)
                         }
                     }
                     
-                    // Status Bar
-                    StressStatusBar(score: Double(stressScoreViewModel.currentScore))
+                    // 间隔区域（调整 height 值来控制 quote 和 Status Bar 之间的距离）
+                    Spacer()
+                        .frame(height: 18)
+                    
+                    // Status Bar - 使用 HomeDataViewModel 的数据
+                    StressStatusBar(score: Double(homeDataViewModel.stressScore))
                         .frame(height: 26)
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
@@ -91,7 +90,7 @@ struct HomeView: View {
                         .sensoryFeedback(.selection, trigger: isShowingStressSheet)
                     
                     // Recommendations
-                    RecommendationsSection()
+//                    RecommendationsSection()
                     
                     // Wellness
                     VStack(alignment: .leading, spacing: 16) {
@@ -100,6 +99,13 @@ struct HomeView: View {
                                 .font(.title3)
                                 .fontWeight(.bold)
                             Spacer()
+                            
+                            // 加载指示器
+                            if homeDataViewModel.isLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                            
                             Button(action: {}) {
                                 Image(systemName: "square.grid.2x2")
                                     .foregroundStyle(.primary)
@@ -113,22 +119,40 @@ struct HomeView: View {
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                             WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
                             
-                            // 总热量卡片 - 点击进入 CalorieIntakeView
-                            WellnessCard(title: "总热量", icon: "figure.walk", value: "3,240", unit: "步", isPromo: false)
+                            // 总热量卡片 - 使用 ViewModel 数据
+                            WellnessCard(
+                                title: "总热量",
+                                icon: "flame.fill",
+                                value: homeDataViewModel.formattedCalories,
+                                unit: "卡路里",
+                                isPromo: false
+                            )
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     isShowingCalorieIntake = true
                                 }
                             
-                            // 优质蛋白卡片 - 点击进入 HighQualityProteinView
-                            WellnessCard(title: "优质蛋白", icon: "heart.fill", value: "72", unit: "bpm", isPromo: false)
+                            // 优质蛋白卡片 - 使用 ViewModel 数据
+                            WellnessCard(
+                                title: "优质蛋白",
+                                icon: "leaf.fill",
+                                value: homeDataViewModel.formattedProtein,
+                                unit: "克",
+                                isPromo: false
+                            )
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     isShowingHighQualityProtein = true
                                 }
 
-                            // 糖负荷卡片 - 点击进入 GlycemicLoadView
-                            WellnessCard(title: "糖负荷", icon: "bed.double.fill", value: "7h 30m", unit: "睡眠时间", isPromo: false)
+                            // 糖负荷卡片 - 使用 ViewModel 数据
+                            WellnessCard(
+                                title: "糖负荷",
+                                icon: "chart.line.uptrend.xyaxis",
+                                value: homeDataViewModel.formattedGlycemicLoad,
+                                unit: "GL",
+                                isPromo: false
+                            )
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     isShowingGlycemicLoad = true
@@ -141,10 +165,14 @@ struct HomeView: View {
                 .background(Color(.systemBackground)) // Ensure background adapts to theme
             } // Content VStack
             } // ScrollView
+            .refreshable {
+                // 下拉刷新
+                await homeDataViewModel.loadAllData()
+            }
             .background(Color(.systemBackground))
             .ignoresSafeArea(.container, edges: .top)
             .sheet(isPresented: $isShowingStressSheet) {
-                StressStatusSheet(score: stressScoreViewModel.currentScore)
+                StressStatusSheet(score: homeDataViewModel.stressScore)
                     .presentationDetents([.fraction(1)])
                     .presentationDragIndicator(.hidden)
                     .presentationCornerRadius(28)
@@ -159,7 +187,10 @@ struct HomeView: View {
                 HighQualityProteinView()
             }
             .task {
-                await stressScoreViewModel.refreshScore()
+                // 首次加载所有数据
+                if !homeDataViewModel.hasLoadedOnce {
+                    await homeDataViewModel.loadAllData()
+                }
             }
         } // NavigationStack
     }
@@ -213,5 +244,6 @@ struct WellnessCard: View {
 
 #Preview {
     HomeView()
-        .environmentObject(StressScoreViewModel())
+        .environmentObject(HomeDataViewModel())
 }
+

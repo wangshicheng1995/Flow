@@ -11,23 +11,31 @@ import UIKit
 // MARK: - Tab 选择枚举
 enum AppTab: Int, Hashable {
     case today = 0
-    case camera = 1
-    case history = 2
+    case summary = 1
+    case camera = 2
+    case history = 3
 }
 
 // MARK: - 主导航容器视图
 struct MainTabView: View {
     @State private var selectedTab: AppTab = .today
     @StateObject private var stressScoreViewModel = StressScoreViewModel()
+    @StateObject private var homeDataViewModel = HomeDataViewModel()
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab(value: AppTab.today) {
                 HomeView()
                     .environment(\.selectedTab, $selectedTab)
-                    .environmentObject(stressScoreViewModel)
+                    .environmentObject(homeDataViewModel)
             } label: {
-                Label("今日", systemImage: "sun.max")
+                Label("Flow", systemImage: "sun.max")
+            }
+
+            Tab(value: AppTab.summary) {
+                SummaryView()
+            } label: {
+                Label("摘要", systemImage: "chart.bar.doc.horizontal")
             }
 
             Tab(value: AppTab.camera) {
