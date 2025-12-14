@@ -1,5 +1,5 @@
 //
-//  GlycemicLoadView.swift
+//  GlycemicLoadDetailView.swift
 //  Flow
 //
 //  Created on 2025-12-05.
@@ -8,8 +8,8 @@
 import SwiftUI
 import Charts
 
-// MARK: - Glycemic Load View
-struct GlycemicLoadView: View {
+// MARK: - Glycemic Load Detail View
+struct GlycemicLoadDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     // Mock data for the heart rate chart
@@ -334,6 +334,6 @@ struct HeartRatePoint: Identifiable {
 
 #Preview {
     NavigationStack {
-        GlycemicLoadView()
+        GlycemicLoadDetailView()
     }
 }

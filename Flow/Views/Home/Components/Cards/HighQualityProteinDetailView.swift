@@ -1,5 +1,5 @@
 //
-//  HighQualityProteinView.swift
+//  HighQualityProteinDetailView.swift
 //  Flow
 //
 //  Created on 2025-12-05.
@@ -8,8 +8,8 @@
 import SwiftUI
 import Charts
 
-// MARK: - High Quality Protein View
-struct HighQualityProteinView: View {
+// MARK: - High Quality Protein Detail View
+struct HighQualityProteinDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     // Mock data for the heart rate chart
@@ -292,6 +292,6 @@ struct HighQualityProteinView: View {
 
 #Preview {
     NavigationStack {
-        HighQualityProteinView()
+        HighQualityProteinDetailView()
     }
 }

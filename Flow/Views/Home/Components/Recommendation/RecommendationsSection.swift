@@ -14,9 +14,9 @@ struct RecommendationsSection: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("今日建议")
-                .font(.title3)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("今日推荐")
+                .font(.headline)
                 .fontWeight(.bold)
 
             HStack(spacing: 12) {
@@ -45,10 +45,11 @@ struct RecommendationChip: View {
             Image(systemName: icon)
                 .foregroundColor(color)
             Text(title)
+                .font(.subheadline)
                 .foregroundColor(.black)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
         .background(Color.gray.opacity(0.1))
         .cornerRadius(24)
     }

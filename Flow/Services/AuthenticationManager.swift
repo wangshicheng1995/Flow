@@ -14,7 +14,7 @@ class AuthenticationManager: ObservableObject {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Flow", category: "Authentication")
     
     // 调试开关：true 开启 Apple 登录，false 关闭（直接进入主页）
-    static let isAppleLoginEnabled = true
+    static let isAppleLoginEnabled = false
     
     @AppStorage("isAuthenticated") var isAuthenticated: Bool = false
     @AppStorage("userIdentifier") var userIdentifier: String = ""

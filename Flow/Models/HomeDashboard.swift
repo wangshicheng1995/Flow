@@ -25,10 +25,10 @@ struct HomeDashboard: Codable {
     /// 今日餐食记录数量
     let mealCount: Int?
     
-    // MARK: - 未来扩展字段（后端暂未实现）
+    /// 优质蛋白列表（今日摄入的优质蛋白种类）
+    let highQualityProteins: [String]?
     
-    /// 优质蛋白摄入量（克）
-    let proteinQuality: Double?
+    // MARK: - 未来扩展字段（后端暂未实现）
     
     /// 糖负荷指数
     let glycemicLoad: Double?

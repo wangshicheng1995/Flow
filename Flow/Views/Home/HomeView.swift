@@ -25,6 +25,11 @@ struct HomeView: View {
     private let contentTopSpacing: CGFloat = 12
 
     var body: some View {
+        mainContent
+    }
+    
+    // MARK: - 主内容视图
+    private var mainContent: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
@@ -90,79 +95,65 @@ struct HomeView: View {
                         .sensoryFeedback(.selection, trigger: isShowingStressSheet)
                     
                     // Recommendations
-//                    RecommendationsSection()
-                    
-                    // Wellness
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("今日饮食")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            Spacer()
-                            
-                            // 加载指示器
-                            if homeDataViewModel.isLoading {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            }
-                            
-                            Button(action: {}) {
-                                Image(systemName: "square.grid.2x2")
-                                    .foregroundStyle(.primary)
-                                    .padding(8)
-                                    .background(Color(.secondarySystemBackground))
-                                    .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
-                            }
-                        }
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                            WellnessCard(title: "开启你的\n健康之旅", icon: nil, value: nil, unit: nil, isPromo: true)
-                            
-                            // 总热量卡片 - 使用 ViewModel 数据
-                            WellnessCard(
-                                title: "总热量",
-                                icon: "flame.fill",
-                                value: homeDataViewModel.formattedCalories,
-                                unit: "卡路里",
-                                isPromo: false
-                            )
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    isShowingCalorieIntake = true
-                                }
-                            
-                            // 优质蛋白卡片 - 使用 ViewModel 数据
-                            WellnessCard(
-                                title: "优质蛋白",
-                                icon: "leaf.fill",
-                                value: homeDataViewModel.formattedProtein,
-                                unit: "克",
-                                isPromo: false
-                            )
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    isShowingHighQualityProtein = true
-                                }
-
-                            // 糖负荷卡片 - 使用 ViewModel 数据
-                            WellnessCard(
-                                title: "糖负荷",
-                                icon: "chart.line.uptrend.xyaxis",
-                                value: homeDataViewModel.formattedGlycemicLoad,
-                                unit: "GL",
-                                isPromo: false
-                            )
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    isShowingGlycemicLoad = true
-                                }
-                        }
-                    }
+                   RecommendationsSection()
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, contentTopSpacing)
                 .background(Color(.systemBackground)) // Ensure background adapts to theme
+                
+                // MARK: - 今日饮食 Dashboard Section
+                // 独立的全宽背景区块，背景色 #EBEAF1
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("今日饮食")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        Spacer()
+                        
+                        // 加载指示器
+                        if homeDataViewModel.isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                        
+                        Button(action: {}) {
+                            Image(systemName: "square.grid.2x2")
+                                .foregroundStyle(.primary)
+                                .padding(8)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                        }
+                    }
+                    
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        // MARK: - 推广卡片
+                        HealthJourneyPromoCard()
+                        
+                        // MARK: - 总热量卡片
+                        CalorieIntakeCard(
+                            value: homeDataViewModel.formattedCalories,
+                            onTap: { isShowingCalorieIntake = true }
+                        )
+                        
+                        // MARK: - 优质蛋白卡片
+                        HighQualityProteinCard(
+                            value: homeDataViewModel.formattedProteinCount,
+                            onTap: { isShowingHighQualityProtein = true }
+                        )
+
+                        // MARK: - 糖负荷卡片
+                        GlycemicLoadCard(
+                            value: homeDataViewModel.formattedGlycemicLoad,
+                            onTap: { isShowingGlycemicLoad = true }
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 18)
+                .frame(maxWidth: .infinity)
+                .background(Color(uiColor: .systemGray6))
+                .padding(.top, 22) // 调整此值可增减与上方「今日建议」的间距（在灰色背景外部）
             } // Content VStack
             } // ScrollView
             .refreshable {
@@ -178,13 +169,13 @@ struct HomeView: View {
                     .presentationCornerRadius(28)
             }
             .navigationDestination(isPresented: $isShowingGlycemicLoad) {
-                GlycemicLoadView()
+                GlycemicLoadDetailView()
             }
             .navigationDestination(isPresented: $isShowingCalorieIntake) {
-                CalorieIntakeView()
+                CalorieIntakeDetailView()
             }
             .navigationDestination(isPresented: $isShowingHighQualityProtein) {
-                HighQualityProteinView()
+                HighQualityProteinDetailView()
             }
             .task {
                 // 首次加载所有数据
@@ -193,53 +184,7 @@ struct HomeView: View {
                 }
             }
         } // NavigationStack
-    }
-}
-
-struct WellnessCard: View {
-    let title: String
-    let icon: String?
-    let value: String?
-    let unit: String?
-    let isPromo: Bool
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.leading)
-                Spacer()
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            Spacer()
-            
-            if !isPromo {
-                HStack(alignment: .lastTextBaseline, spacing: 4) {
-                    Text(value ?? "")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text(unit ?? "")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-            } else {
-                Image(systemName: "arrow.right")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(16)
-        .frame(height: 140)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
-    }
+    } // mainContent
 }
 
 #Preview {

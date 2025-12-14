@@ -24,8 +24,8 @@ final class HomeDataViewModel: ObservableObject {
     /// 今日餐食记录数量
     @Published var mealCount: Int = 0
     
-    /// 优质蛋白摄入量（克）- 后端暂未实现
-    @Published var proteinQuality: Double = 0
+    /// 优质蛋白列表（今日摄入的优质蛋白种类）
+    @Published var highQualityProteins: [String] = []
     
     /// 糖负荷指数 - 后端暂未实现
     @Published var glycemicLoad: Double = 0
@@ -125,9 +125,9 @@ final class HomeDataViewModel: ObservableObject {
             if let count = dashboard.mealCount {
                 mealCount = count
             }
-            // 优质蛋白和糖负荷 - 后端暂未返回，使用默认值
-            if let protein = dashboard.proteinQuality {
-                proteinQuality = protein
+            // 优质蛋白列表
+            if let proteins = dashboard.highQualityProteins {
+                highQualityProteins = proteins
             }
             if let glycemic = dashboard.glycemicLoad {
                 glycemicLoad = glycemic
@@ -155,9 +155,9 @@ extension HomeDataViewModel {
         return formatter.string(from: NSNumber(value: totalCalories)) ?? "\(totalCalories)"
     }
     
-    /// 格式化蛋白质显示
-    var formattedProtein: String {
-        return String(format: "%.0f", proteinQuality)
+    /// 格式化蛋白质种类数量显示
+    var formattedProteinCount: String {
+        return "\(highQualityProteins.count)"
     }
     
     /// 格式化糖负荷显示

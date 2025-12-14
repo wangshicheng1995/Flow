@@ -6,8 +6,8 @@
       "blur-material" : null,
       "layers" : [
         {
-          "image-name" : "ChatGPT Image 2025年12月11日 23_48_23.png",
-          "name" : "ChatGPT Image 2025年12月11日 23_48_23",
+          "image-name" : "icon_1.png",
+          "name" : "icon_1",
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
@@ -29,8 +29,8 @@
     {
       "layers" : [
         {
-          "image-name" : "ChatGPT Image 2025年12月11日 23_55_45.png",
-          "name" : "ChatGPT Image 2025年12月11日 23_55_45",
+          "image-name" : "icon_2.png",
+          "name" : "icon_2",
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
