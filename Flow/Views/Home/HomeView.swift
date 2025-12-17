@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var isShowingGlycemicLoad = false
     @State private var isShowingCalorieIntake = false
     @State private var isShowingHighQualityProtein = false
+    @State private var isShowingMyView = false
     
     // MARK: - Banner 布局调节参数
     /// Banner 显示区域的高度 - 调小此值可以让 banner 更矮，类似 Gentler Streak 的效果
@@ -176,6 +177,20 @@ struct HomeView: View {
             }
             .navigationDestination(isPresented: $isShowingHighQualityProtein) {
                 HighQualityProteinDetailView()
+            }
+            .navigationDestination(isPresented: $isShowingMyView) {
+                MyView()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isShowingMyView = true
+                    } label: {
+                        Image(systemName: "person.crop.circle")
+                            .font(.title3)
+                            .foregroundStyle(.primary)
+                    }
+                }
             }
             .task {
                 // 首次加载所有数据

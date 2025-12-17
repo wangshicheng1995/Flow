@@ -13,7 +13,6 @@ enum AppTab: Int, Hashable {
     case today = 0
     case summary = 1
     case camera = 2
-    case history = 3
 }
 
 // MARK: - 主导航容器视图
@@ -21,6 +20,11 @@ struct MainTabView: View {
     @State private var selectedTab: AppTab = .today
     @StateObject private var stressScoreViewModel = StressScoreViewModel()
     @StateObject private var homeDataViewModel = HomeDataViewModel()
+    
+    // 判断是否显示 TabBar
+    private var showTabBar: Bool {
+        selectedTab != .camera
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -32,25 +36,20 @@ struct MainTabView: View {
                 Label("Flow", systemImage: "sun.max")
             }
 
+            Tab(value: AppTab.camera) {
+                RecordView()
+                    .environment(\.selectedTab, $selectedTab)
+                    .environmentObject(stressScoreViewModel)
+            } label: {
+                Label("记录", systemImage: "camera")
+            }
+
             Tab(value: AppTab.summary) {
                 SummaryView()
             } label: {
                 Label("摘要", systemImage: "chart.bar.doc.horizontal")
             }
 
-            Tab(value: AppTab.camera) {
-                CameraView()
-                    .environment(\.selectedTab, $selectedTab)
-                    .environmentObject(stressScoreViewModel)
-            } label: {
-                Label("拍照", systemImage: "camera")
-            }
-
-            Tab(value: AppTab.history) {
-                MyView()
-            } label: {
-                Label("我的", systemImage: "person")
-            }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
     }

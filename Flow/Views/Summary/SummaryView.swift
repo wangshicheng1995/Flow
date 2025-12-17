@@ -10,6 +10,7 @@ import SwiftUI
 // MARK: - Summary 主视图
 struct SummaryView: View {
     @State private var isShowingHistory = false
+    @State private var isShowingMyView = false
     
     // MARK: - Mock 数据
     private let mockHealthRingData = HealthRingData(
@@ -106,6 +107,20 @@ struct SummaryView: View {
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(isPresented: $isShowingHistory) {
                 HistoryDetailView()
+            }
+            .navigationDestination(isPresented: $isShowingMyView) {
+                MyView()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isShowingMyView = true
+                    } label: {
+                        Image(systemName: "person.crop.circle")
+                            .font(.title3)
+                            .foregroundStyle(.primary)
+                    }
+                }
             }
         }
     }
