@@ -15,20 +15,24 @@ struct FoodAnalysisResponse: Codable {
 }
 
 struct FoodAnalysisData: Codable {
+    let foodName: String?
     let foods: [FoodItem]
     let nutrition: Nutrition
     let confidence: Double
     let isBalanced: Bool
     let nutritionSummary: String
+    let highQualityProteins: [String]?
     let overallEvaluation: OverallEvaluation?
     let impact: ImpactAnalysis?
     
     enum CodingKeys: String, CodingKey {
+        case foodName
         case foods
         case nutrition
         case confidence
         case isBalanced
         case nutritionSummary
+        case highQualityProteins
         case overallEvaluation
         case impact
     }
@@ -36,13 +40,19 @@ struct FoodAnalysisData: Codable {
 
 struct FoodItem: Codable, Hashable {
     let name: String
-    let amountG: Int
     let cook: String?
+    let kcal: Int
+    let carbs: Int?
+    let proteins: Int?
+    let fats: Int?
     
     enum CodingKeys: String, CodingKey {
         case name
-        case amountG = "amount_g"
         case cook
+        case kcal
+        case carbs
+        case proteins
+        case fats
     }
 }
 

@@ -48,9 +48,10 @@ struct RecordView: View {
                         currentMode: $currentMode,
                         geometry: geometry,
                         onImageCaptured: { image in
-                            // 拍照后存储图片并显示分析页面
-                            pendingImage = image
-                            showAnalyzingView = true
+                            // 拍照后开始分析流程
+                            Task {
+                                await startImageAnalysis(image: image)
+                            }
                         }
                     )
                 case .text:
@@ -63,7 +64,7 @@ struct RecordView: View {
         } message: {
             Text(viewModel.errorMessage ?? "未知错误")
         }
-        // ⭐️ 分析等待页面（AnalyzingView）
+        // ⭐️ 分析等待页面（AnalyzingView）- 纯 UI 展示
         .fullScreenCover(isPresented: $showAnalyzingView) {
             if let image = pendingImage {
                 AnalyzingView(
@@ -72,36 +73,14 @@ struct RecordView: View {
                         // 用户取消，返回拍照页面
                         showAnalyzingView = false
                         pendingImage = nil
-                    },
-                    onAnalysisComplete: { result in
-                        // 分析完成，跳转到结果页面
-                        analysisResult = result
-                        showAnalyzingView = false
-                        
-                        // 延迟一点再显示结果页，确保动画流畅
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showFoodAnalysis = true
-                        }
-                        
-                        // 刷新压力分数
-                        Task {
-                            await stressScoreViewModel.refreshScore()
-                        }
-                    },
-                    onAnalysisError: { error in
-                        // 分析失败
-                        viewModel.errorMessage = error
-                        viewModel.showError = true
-                        showAnalyzingView = false
-                        pendingImage = nil
                     }
                 )
             }
         }
-        // ⭐️ 分析结果页面（FoodAnalysisView）
+        // ⭐️ 分析结果页面（FoodNutritionalView）
         .fullScreenCover(isPresented: $showFoodAnalysis) {
             if let result = analysisResult, let image = pendingImage {
-                FoodAnalysisView(analysisData: result, capturedImage: image)
+                FoodNutritionalView(analysisData: result, capturedImage: image)
             }
         }
         .onChange(of: viewModel.selectedPhotoItem) { _, _ in
@@ -114,8 +93,8 @@ struct RecordView: View {
                             return
                         }
                         viewModel.selectedPhotoItem = nil
-                        pendingImage = image
-                        showAnalyzingView = true
+                        // 开始分析流程
+                        await startImageAnalysis(image: image)
                     } catch {
                         print("❌ 加载图库照片失败")
                     }
@@ -153,6 +132,56 @@ struct RecordView: View {
             withAnimation(.easeOut) {
                 showCenterHint = false
             }
+        }
+    }
+    
+    // MARK: - 图片分析流程
+    /// 开始图片分析流程：显示等待页面 -> 发起网络请求 -> 处理结果 -> 保存图片到本地
+    @MainActor
+    private func startImageAnalysis(image: UIImage) async {
+        // 1. 先设置图片并显示等待页面
+        pendingImage = image
+        showAnalyzingView = true
+        
+        // 2. 发起网络请求
+        do {
+            print("📤 RecordView: 开始上传图片...")
+            let result = try await FoodAnalysisService.shared.uploadImage(image)
+            print("✅ RecordView: 分析完成，返回 \(result.foods.count) 种食物")
+            
+            // 3. ⭐️ 保存图片到本地
+            do {
+                let (mealId, _) = try MealImageStorage.shared.saveImageWithTimestamp(image)
+                print("💾 RecordView: 图片已保存到本地，mealId: \(mealId)")
+            } catch {
+                // 图片保存失败不影响主流程，仅打印日志
+                print("⚠️ RecordView: 图片保存失败 - \(error.localizedDescription)")
+            }
+            
+            // 4. 请求成功，保存结果并关闭等待页
+            analysisResult = result
+            showAnalyzingView = false
+            
+            // 5. 延迟显示结果页，确保动画流畅
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 秒
+            showFoodAnalysis = true
+            
+            // 6. 刷新压力分数
+            await stressScoreViewModel.refreshScore()
+            
+        } catch {
+            print("❌ RecordView: 分析失败 - \(error.localizedDescription)")
+            
+            // 请求失败，显示错误并关闭等待页
+            showAnalyzingView = false
+            pendingImage = nil
+            
+            if let apiError = error as? APIError {
+                viewModel.errorMessage = apiError.localizedDescription
+            } else {
+                viewModel.errorMessage = "图片分析失败，请重试"
+            }
+            viewModel.showError = true
         }
     }
 }

@@ -45,9 +45,11 @@ struct MainTabView: View {
             }
 
             Tab(value: AppTab.summary) {
+                // ⚠️ 临时：验收图片存储功能，验收完成后改回 SummaryView()
+//                MealImageListView()
                 SummaryView()
             } label: {
-                Label("摘要", systemImage: "chart.bar.doc.horizontal")
+                Label("图片", systemImage: "photo.stack")
             }
 
         }
