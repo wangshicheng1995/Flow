@@ -23,15 +23,58 @@ struct AnalyzingView: View {
     private let circleImageSize: CGFloat = 320
     
     var body: some View {
-        ZStack {
-            // 背景色
-            Color(.systemGroupedBackground)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // 顶部导航栏
-                HStack {
-                    // 左侧关闭按钮
+        NavigationStack {
+            ZStack {
+                // 主内容
+                VStack(spacing: 0) {
+                    Spacer()
+                    
+                    // 中间内容区域
+                    VStack(spacing: 24) {
+                        // 圆形食物图片
+                        Image(uiImage: capturedImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: circleImageSize, height: circleImageSize)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
+                        
+                        // 分析状态文字
+                        VStack(spacing: 8) {
+                            Text("正在计算中")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            HStack(spacing: 4) {
+                                Text("Powered by AI")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                                
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    Spacer() // 给底部图片留出空间
+                }
+                
+                // ⭐️ 底部 Logo 图片（固定在底部，贴近屏幕边缘）
+                VStack {
+                    Spacer()
+                    Image("stretchingcat")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 100)  // 👈 调整这个值改变图片大小
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemGroupedBackground))
+            .toolbar {
+                // 左侧关闭按钮
+                ToolbarItem(placement: .topBarLeading) {
                     Button(action: {
                         onDismiss?()
                     }) {
@@ -40,54 +83,10 @@ struct AnalyzingView: View {
                             .foregroundColor(.primary)
                             .frame(width: 44, height: 44)
                     }
-                    
-                    Spacer()
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                
-                Spacer()
-                
-                // 中间内容区域
-                VStack(spacing: 24) {
-                    // 圆形食物图片
-                    Image(uiImage: capturedImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: circleImageSize, height: circleImageSize)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
-                    
-                    // 分析状态文字
-                    VStack(spacing: 8) {
-                        Text("正在计算中")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.primary)
-                        
-                        HStack(spacing: 4) {
-                            Text("Powered by AI")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
-                            
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                
-                Spacer()
-                Spacer() // 给底部图片留出空间
             }
-            
-            // ⭐️ 底部 Logo 图片（固定在底部，贴近屏幕边缘）
-            VStack {
-                Spacer()
-                Image("stretchingcat")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 100)  // 👈 调整这个值改变图片大小
-            }
+            .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 }

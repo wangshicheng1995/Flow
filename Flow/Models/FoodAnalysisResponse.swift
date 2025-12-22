@@ -42,9 +42,9 @@ struct FoodItem: Codable, Hashable {
     let name: String
     let cook: String?
     let kcal: Int
-    let carbs: Int?
-    let proteins: Int?
-    let fats: Int?
+    let carbs: Double?      // API 返回浮点数，如 23.0
+    let proteins: Double?   // API 返回浮点数，如 1.5
+    let fats: Double?       // API 返回浮点数，如 0.2
     
     enum CodingKeys: String, CodingKey {
         case name

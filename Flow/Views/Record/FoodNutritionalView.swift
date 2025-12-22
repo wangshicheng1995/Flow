@@ -12,6 +12,7 @@ import SwiftUI
 // MARK: - 主视图
 struct FoodNutritionalView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.selectedTab) private var selectedTab
     
     /// 食物分析数据
     var analysisData: FoodAnalysisData?
@@ -47,31 +48,68 @@ struct FoodNutritionalView: View {
     private let healthyCalorieColor = Color(red: 29/255, green: 194/255, blue: 134/255) // #1DC286 绿色（健康）
     
     var body: some View {
-        ZStack {
-            bgColor.ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // 顶部导航栏
-                headerView
-                    .padding(.top, 16)
-                
-                // 主内容（43:3106）
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        // 总览卡片 (43:3109)
-                        overallCard
-                        
-                        // 食物清单标题 (43:3152)
-                        foodListHeader
-                        
-                        // 食物清单列表 (43:3160)
-                        foodListItems
+        NavigationStack {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
+                    // 总览卡片 (43:3109)
+                    overallCard
+                    
+                    // 食物清单标题 (43:3152)
+                    foodListHeader
+                    
+                    // 食物清单列表 (43:3160)
+                    foodListItems
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+            }
+            .background(bgColor)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // 左侧返回按钮
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: {
+                        // 先关闭当前页面，再切换到首页 Tab
+                        dismiss()
+                        selectedTab.wrappedValue = .today
+                    }) {
+                        Circle()
+                            .fill(Color.white.opacity(0.5))
+                            .overlay(Circle().stroke(Color.white, lineWidth: 1))
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(textPrimary)
+                            )
+                            .shadow(color: shadowColor.opacity(0.1), radius: 3, x: 0, y: 4)
                     }
-                    .padding(.horizontal, 22)
-                    .padding(.top, 16)
-                    .padding(.bottom, 40)
+                }
+                
+                // 中间食物名称
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(healthyCalorieColor)
+                            .frame(width: 8, height: 8)
+                        Text(foodName)
+                            .font(.system(size: 12, weight: .regular))
+                            .tracking(0.12)
+                            .foregroundColor(textSecondary)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 11)
+                    .background(
+                        Capsule()
+                            .fill(Color.white.opacity(0.5))
+                            .overlay(Capsule().stroke(Color.white, lineWidth: 1))
+                    )
                 }
             }
+            .toolbarBackground(bgColor, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
     
@@ -295,9 +333,9 @@ private struct FoodRow: View {
     let name: String
     let cook: String
     let kcal: Int
-    let carbs: Int
-    let proteins: Int
-    let fats: Int
+    let carbs: Double
+    let proteins: Double
+    let fats: Double
     
     /// 根据食物名称匹配的图标名称
     private var iconName: String {
@@ -346,25 +384,17 @@ private struct FoodRow: View {
                 
                 // 营养信息：碳水 • 蛋白 • 脂肪
                 HStack(spacing: 0) {
-                    Text("碳水 \(carbs)g")
+                    Text("碳水 \(Int(carbs))g")
                         .font(.system(size: 14, weight: .regular))
                         .tracking(-0.07)
                         .foregroundColor(textTertiary)
                     
-                    // Text(" • ")
-                    //     .font(.system(size: 12))
-                    //     .foregroundColor(textTertiary)
-                    
-                    Text(" 蛋白质 \(proteins)g")
+                    Text(" 蛋白质 \(Int(proteins))g")
                         .font(.system(size: 14, weight: .regular))
                         .tracking(-0.07)
                         .foregroundColor(textTertiary)
                     
-                    // Text(" • ")
-                    //     .font(.system(size: 12))
-                    //     .foregroundColor(textTertiary)
-                    
-                    Text(" 脂肪 \(fats)g")
+                    Text(" 脂肪 \(Int(fats))g")
                         .font(.system(size: 14, weight: .regular))
                         .tracking(-0.07)
                         .foregroundColor(textTertiary)

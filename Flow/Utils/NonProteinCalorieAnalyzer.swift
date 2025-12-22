@@ -36,8 +36,8 @@ enum NonProteinCalorieAnalyzer {
     ///   - carbs: 碳水化合物（克）
     ///   - fats: 脂肪（克）
     /// - Returns: 非蛋白热量（千卡）
-    static func calculateNonProteinCalories(carbs: Int, fats: Int) -> Double {
-        return Double(carbs) * carbCaloriesPerGram + Double(fats) * fatCaloriesPerGram
+    static func calculateNonProteinCalories(carbs: Double, fats: Double) -> Double {
+        return carbs * carbCaloriesPerGram + fats * fatCaloriesPerGram
     }
     
     /// 分析食材列表，返回每个食材的热量等级
