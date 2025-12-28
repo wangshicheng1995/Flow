@@ -37,6 +37,9 @@ struct FlowApp: App {
             Group {
                 if AuthenticationManager.isAppleLoginEnabled && !authManager.isAuthenticated {
                     LoginView()
+                } else if !authManager.hasCompletedOnboarding {
+                    // 用户已登录但未完成 Onboarding
+                    OnboardingContainerView()
                 } else {
                     MainTabView()
                 }

@@ -2,6 +2,7 @@
 //  SummaryView.swift
 //  Flow
 //
+//  根据设计稿 1:1 复刻的健康概览页面
 //  Created on 2025-12-10.
 //
 
@@ -9,167 +10,130 @@ import SwiftUI
 
 // MARK: - Summary 主视图
 struct SummaryView: View {
+    @StateObject private var viewModel = SummaryViewModel()
     @State private var isShowingHistory = false
     @State private var isShowingMyView = false
     
-    // MARK: - Mock 数据
-    private let mockHealthRingData = HealthRingData(
-        nutritionBalanceIndex: 0.92,
-        dietQualityIndex: 0.76,
-        daysCount: 48
+    // Preview 专用：预设数据
+    private var previewBarData: [CGFloat]?
+    private var previewTodayCalories: Int?
+    private var previewMealCount: Int?
+    
+    /// 默认初始化器（使用 ViewModel 数据）
+    init() {
+        self.previewBarData = nil
+        self.previewTodayCalories = nil
+        self.previewMealCount = nil
+    }
+    
+    /// Preview 专用初始化器（使用预设数据）
+    init(previewBarData: [CGFloat], previewTodayCalories: Int, previewMealCount: Int) {
+        self.previewBarData = previewBarData
+        self.previewTodayCalories = previewTodayCalories
+        self.previewMealCount = previewMealCount
+    }
+    
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 16) {
+                // MARK: - 顶部标题区域
+                SummaryHeaderSection()
+                
+                // MARK: - 卡路里总览卡片（对接后端数据）
+                CalorieOverviewCard(
+                    barData: previewBarData ?? (viewModel.barChartData.isEmpty
+                        ? [1646, 1412, 1433, 1683, 1699, 1298, 1668] // 默认 mock 数据
+                        : viewModel.barChartData),
+                    todayCalories: previewTodayCalories ?? viewModel.todayCalories,
+                    mealCount: previewMealCount ?? viewModel.todayMealCount,
+                    isLoading: previewBarData == nil && viewModel.isLoading
+                )
+                
+                // MARK: - Stress Score 卡片
+                StressScoreCard()
+                
+                // MARK: - 指标网格（4个小卡片）
+                metricsGrid
+                
+                // MARK: - Today's Diggest 卡片
+                TodaysDiggestCard()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 100) // 为底部 TabBar 留出空间
+        }
+        .background(SummaryColors.bgColor)
+        .task {
+            // 页面加载时获取数据（仅在非 Preview 模式）
+            if previewBarData == nil && !viewModel.hasLoadedOnce {
+                await viewModel.loadAllData()
+            }
+        }
+        .refreshable {
+            // 下拉刷新
+            await viewModel.loadAllData()
+        }
+    }
+    
+    // MARK: - 指标网格
+    private var metricsGrid: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ],
+            spacing: 12
+        ) {
+            // Current Weight
+            MetricSmallCard(
+                title: "Current Weight",
+                value: "200g",
+                unit: "lbs",
+                changePercent: 10,
+                isPositive: true
+            )
+            
+            // Active Minutes
+            MetricSmallCard(
+                title: "Active Minutes",
+                value: "294",
+                unit: "mins",
+                changePercent: 10,
+                isPositive: false
+            )
+            
+            // Last Heart Rate
+            MetricSmallCard(
+                title: "Last Heart Rate",
+                value: "82",
+                unit: "bpm",
+                changePercent: 10,
+                isPositive: true
+            )
+            
+            // Last HRV
+            MetricSmallCard(
+                title: "Last HRV",
+                value: "56",
+                unit: "ms",
+                changePercent: 10,
+                isPositive: false
+            )
+        }
+    }
+}
+
+// MARK: - Previews
+
+// 使用真实 API 返回的数据
+#Preview("真实数据") {
+    SummaryView(
+        previewBarData: [1646, 1412, 1433, 1683, 1699, 1298, 1668],
+        previewTodayCalories: 1668,
+        previewMealCount: 3
     )
-    
-    private let mockTips = [
-        "晚餐的油盐偏多，明天可以尝试少油少盐烹饪。",
-        "蛋白质略低，适合在加餐中补一点酸奶或坚果。",
-        "今天的总体热量已经接近目标，建议避免睡前进食。"
-    ]
-    
-    private let mockHistoryItems: [HistoryItem] = [
-        .init(date: "12/04", score: 58),
-        .init(date: "12/05", score: 64),
-        .init(date: "12/06", score: 60),
-        .init(date: "12/07", score: 72),
-        .init(date: "12/08", score: 45),
-        .init(date: "12/09", score: 55)
-    ]
-    
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    
-                    // MARK: - 区域 1：今日健康圆环
-                    TodayHealthRingsView(data: mockHealthRingData)
-                        .padding(.horizontal, 16)
-                    
-                    
-                    // MARK: - 区域 2：核心指标网格
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: 12),
-                            GridItem(.flexible(), spacing: 12)
-                        ],
-                        spacing: 12
-                    ) {
-                        MetricCard(
-                            title: "总热量",
-                            status: .nearGoal,
-                            valueText: "1,780 kcal",
-                            subText: "目标 2,000 kcal",
-                            hint: "晚上注意避免额外零食，今天的总热量已经接近目标。"
-                        )
-                        
-                        MetricCard(
-                            title: "优质蛋白",
-                            status: .slightlyLow,
-                            valueText: "58 g",
-                            subText: "建议 70–90 g",
-                            hint: "今天可以再补充一点鱼类、鸡胸肉或豆制品。"
-                        )
-                        
-                        MetricCard(
-                            title: "糖压力",
-                            status: .high,
-                            valueText: "GL 78",
-                            subText: "建议控制在 60 以下",
-                            hint: "精制碳水略多，明天可尝试用全谷物或蔬菜替代部分主食。"
-                        )
-                        
-                        MetricCard(
-                            title: "盐压力",
-                            status: .normal,
-                            valueText: "2,900 mg",
-                            subText: "建议 < 4,800 mg",
-                            hint: "今天的钠摄入在合理范围内，可以继续保持当前口味。"
-                        )
-                    }
-                    .padding(.horizontal, 16)
-                    
-                    // MARK: - 区域 3：今日重点提醒
-                    TodayTipsCard(tips: mockTips)
-                        .padding(.horizontal, 16)
-                    
-                    // MARK: - 区域 4：过去记录入口
-                    HistoryPreviewSection(
-                        items: mockHistoryItems,
-                        onViewAll: {
-                            isShowingHistory = true
-                        }
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
-                }
-                .padding(.top, 16)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("健康总览")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(isPresented: $isShowingHistory) {
-                HistoryDetailView()
-            }
-            .navigationDestination(isPresented: $isShowingMyView) {
-                MyView()
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isShowingMyView = true
-                    } label: {
-                        Image(systemName: "person.crop.circle")
-                            .font(.title3)
-                            .foregroundStyle(.primary)
-                    }
-                }
-            }
-        }
-    }
 }
 
-// MARK: - 历史详情页面占位符
-struct HistoryDetailView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Text("历史记录详情")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Text("此页面将显示更详细的历史趋势数据和图表分析。")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                
-                // 占位符内容
-                ForEach(0..<10) { index in
-                    HStack {
-                        Text("12/0\(index + 1)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        
-                        Spacer()
-                        
-                        Text("\(Int.random(in: 40...80)) 分")
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
-                }
-            }
-            .padding(16)
-        }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("历史记录")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Preview
-#Preview {
+#Preview("默认") {
     SummaryView()
 }

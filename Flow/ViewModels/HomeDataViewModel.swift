@@ -41,13 +41,13 @@ final class HomeDataViewModel: ObservableObject {
     
     // MARK: - 私有属性
     
-    private let flowService: FlowService
+    private let homeService: HomeService
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - 初始化
     
-    init(flowService: FlowService = .shared) {
-        self.flowService = flowService
+    init(homeService: HomeService = .shared) {
+        self.homeService = homeService
         setupNotificationObservers()
     }
     
@@ -113,7 +113,7 @@ final class HomeDataViewModel: ObservableObject {
         do {
             let userId = AuthenticationManager.shared.userIdentifier
             let date = getCurrentDateString()
-            let dashboard = try await flowService.fetchHomeDashboard(userId: userId, date: date)
+            let dashboard = try await homeService.fetchDashboard(userId: userId, date: date)
             
             // 更新所有数据
             if let score = dashboard.stressScore {

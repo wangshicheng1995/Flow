@@ -63,6 +63,26 @@ struct LoginView: View {
                 .padding(.bottom, 60)
             }
         }
+        .onAppear {
+            triggerNetworkPermission()
+        }
+    }
+    
+    /// 触发网络权限弹窗
+    /// 通过发起一个简单的网络请求，强制 iOS 弹出"允许无线数据"的弹窗
+    private func triggerNetworkPermission() {
+        guard let url = URL(string: "https://www.apple.com") else { return }
+        
+        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 3)
+        print("🌐 [Network] 正在发起网络请求以触发权限弹窗...")
+        
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error = error {
+                print("❌ [Network] 网络请求失败 (可能用户拒绝了权限或无网络): \(error.localizedDescription)")
+            } else if let httpResponse = response as? HTTPURLResponse {
+                print("✅ [Network] 网络请求成功 (权限已开启), 状态码: \(httpResponse.statusCode)")
+            }
+        }.resume()
     }
 }
 

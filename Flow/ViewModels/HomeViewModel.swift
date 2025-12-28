@@ -20,7 +20,7 @@ final class HomeViewModel {
     var showError: Bool = false
     var stressScoreRefresher: (() async -> Void)?
 
-    let analysisService = FoodAnalysisService.shared
+    let analysisService = RecordService.shared
 
     // 处理从相册选择的照片
     func handlePhotoSelection() async {

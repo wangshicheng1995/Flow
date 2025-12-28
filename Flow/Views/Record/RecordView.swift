@@ -146,7 +146,7 @@ struct RecordView: View {
         // 2. 发起网络请求
         do {
             print("📤 RecordView: 开始上传图片...")
-            let result = try await FoodAnalysisService.shared.uploadImage(image)
+            let result = try await RecordService.shared.uploadImage(image)
             print("✅ RecordView: 分析完成，返回 \(result.foods.count) 种食物")
             
             // 3. ⭐️ 保存图片到本地

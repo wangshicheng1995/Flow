@@ -14,7 +14,7 @@ class AuthenticationManager: ObservableObject {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Flow", category: "Authentication")
     
     // 调试开关：true 开启 Apple 登录，false 关闭（直接进入主页）
-    static let isAppleLoginEnabled = false
+    static let isAppleLoginEnabled = true
     
     @AppStorage("isAuthenticated") var isAuthenticated: Bool = false
     @AppStorage("userIdentifier") var userIdentifier: String = ""
@@ -22,6 +22,16 @@ class AuthenticationManager: ObservableObject {
     @AppStorage("userFullName") var userFullName: String = ""
     @AppStorage("userFamilyName") var userFamilyName: String = ""
     @AppStorage("userGivenName") var userGivenName: String = ""
+    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
+    
+    private init() {
+        // 当 Apple Sign In 关闭时，使用设备唯一标识符作为 userId
+        if !AuthenticationManager.isAppleLoginEnabled && userIdentifier.isEmpty {
+            // 使用 UUID 生成唯一标识符并持久化
+            userIdentifier = "device_\(UUID().uuidString)"
+            logger.info("📱 生成设备唯一标识符: \(self.userIdentifier)")
+        }
+    }
     
     func handleSignIn(result: Result<ASAuthorization, Error>) {
         switch result {
@@ -89,5 +99,6 @@ class AuthenticationManager: ObservableObject {
         userFullName = ""
         userFamilyName = ""
         userGivenName = ""
+        hasCompletedOnboarding = false
     }
 }

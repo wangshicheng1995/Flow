@@ -49,7 +49,7 @@ struct MainTabView: View {
 //                MealImageListView()
                 SummaryView()
             } label: {
-                Label("图片", systemImage: "photo.stack")
+                Label("总览", systemImage: "chart.bar.doc.horizontal")
             }
 
         }

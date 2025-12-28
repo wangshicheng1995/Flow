@@ -13,10 +13,10 @@ final class StressScoreViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
 
-    private let flowService: FlowService
+    private let healthService: HealthService
 
-    init(flowService: FlowService = .shared) {
-        self.flowService = flowService
+    init(healthService: HealthService = .shared) {
+        self.healthService = healthService
     }
 
     func refreshScore() async {
@@ -24,7 +24,7 @@ final class StressScoreViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let response = try await flowService.fetchStressScore()
+            let response = try await healthService.fetchStressScore()
             currentScore = response.score
             errorMessage = nil
         } catch let apiError as APIError {

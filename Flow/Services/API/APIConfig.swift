@@ -10,7 +10,7 @@ import Foundation
 /// API 全局配置
 enum APIConfig {
     /// 后端服务基础 URL
-    static let baseURL = "http://139.196.221.226:8080"
+    static let baseURL = "https://bewatermyfriend.cn"
     
     /// 请求超时时间（秒）
     static let timeout: TimeInterval = 30
