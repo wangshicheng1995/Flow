@@ -13,8 +13,8 @@ class AuthenticationManager: ObservableObject {
     static let shared = AuthenticationManager()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Flow", category: "Authentication")
     
-    // 调试开关：true 开启 Apple 登录，false 关闭（直接进入主页）
-    static let isAppleLoginEnabled = true
+    // 调试开关：true = 需要 Apple 登录，false = 跳过登录直接进入 Onboarding
+    static let isAppleLoginEnabled = false // ← 设为 false 可在模拟器上调试 Onboarding
     
     @AppStorage("isAuthenticated") var isAuthenticated: Bool = false
     @AppStorage("userIdentifier") var userIdentifier: String = ""
@@ -25,11 +25,18 @@ class AuthenticationManager: ObservableObject {
     @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
     
     private init() {
-        // 当 Apple Sign In 关闭时，使用设备唯一标识符作为 userId
-        if !AuthenticationManager.isAppleLoginEnabled && userIdentifier.isEmpty {
-            // 使用 UUID 生成唯一标识符并持久化
-            userIdentifier = "device_\(UUID().uuidString)"
-            logger.info("📱 生成设备唯一标识符: \(self.userIdentifier)")
+        // 当 Apple Sign In 关闭时，自动模拟登录状态，并进入 Onboarding 流程
+        if !AuthenticationManager.isAppleLoginEnabled {
+            // 生成或保留设备唯一标识符
+            if userIdentifier.isEmpty {
+                userIdentifier = "device_\(UUID().uuidString)"
+                logger.info("📱 生成设备唯一标识符: \(self.userIdentifier)")
+            }
+            
+            // 模拟已登录，但未完成 Onboarding → 这样会进入 OnboardingContainerView
+            isAuthenticated = true
+            hasCompletedOnboarding = false
+            logger.info("🔧 调试模式：跳过 Apple 登录，进入 Onboarding 流程")
         }
     }
     

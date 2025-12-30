@@ -31,17 +31,33 @@ struct FlowApp: App {
         ThemePreference.resolve(storedThemePreference)
     }
 
+    @State private var showSplash = true
+    
     var body: some Scene {
         WindowGroup {
-            // 检查调试开关和认证状态
             Group {
-                if AuthenticationManager.isAppleLoginEnabled && !authManager.isAuthenticated {
-                    LoginView()
-                } else if !authManager.hasCompletedOnboarding {
-                    // 用户已登录但未完成 Onboarding
-                    OnboardingContainerView()
+                if showSplash {
+                    SplashView()
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                withAnimation {
+                                    showSplash = false
+                                }
+                            }
+                        }
                 } else {
-                    MainTabView()
+                    // Splash 结束后，根据状态路由
+                    if authManager.isAuthenticated {
+                        if authManager.hasCompletedOnboarding {
+                            MainTabView()
+                        } else {
+                            // 已登录但未完成资料填写
+                            OnboardingContainerView()
+                        }
+                    } else {
+                        // 未登录 -> 进入登录/开始页
+                        GetStartedView()
+                    }
                 }
             }
             .preferredColorScheme(themePreference.colorScheme)

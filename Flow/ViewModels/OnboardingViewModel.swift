@@ -12,32 +12,32 @@ import Combine
 
 /// Onboarding 页面枚举
 enum OnboardingPage: Int, CaseIterable {
-    case nickname = 0      // 怎么称呼你
-    case gender = 1        // 性别选择
-    case birthYear = 2     // 出生年份
-    case bodyMeasurement = 3  // 身高体重
-    case activityLevel = 4    // 日常活动水平
-    case healthGoal = 5       // 健康目标
+    case healthGoal = 0       // 你的健康目标 (第1页)
+    case activityLevel = 1    // 日常活动水平 (第2页)
+    case nickname = 2         // 怎么称呼你
+    case gender = 3           // 性别选择
+    case birthYear = 4        // 出生年份
+    case bodyMeasurement = 5  // 身高体重 (最后一页)
     
     var title: String {
         switch self {
+        case .healthGoal: return "你的健康目标"
+        case .activityLevel: return "日常活动水平"
         case .nickname: return "怎么称呼你"
         case .gender: return "你的性别"
         case .birthYear: return "你的出生年份"
         case .bodyMeasurement: return "你的身高体重"
-        case .activityLevel: return "日常活动水平"
-        case .healthGoal: return "你的健康目标"
         }
     }
     
     var subtitle: String {
         switch self {
+        case .healthGoal: return "我们会根据目标给出建议"
+        case .activityLevel: return "了解你的运动习惯"
         case .nickname: return "让我们更好地认识你"
         case .gender: return "用于计算基础代谢率"
         case .birthYear: return "年龄会影响热量需求"
         case .bodyMeasurement: return "精确计算你的每日热量"
-        case .activityLevel: return "了解你的运动习惯"
-        case .healthGoal: return "我们会根据目标给出建议"
         }
     }
 }
@@ -47,8 +47,8 @@ enum OnboardingPage: Int, CaseIterable {
 class OnboardingViewModel: ObservableObject {
     // MARK: - Published Properties
     
-    /// 当前页面索引
-    @Published var currentPage: OnboardingPage = .nickname
+    /// 当前页面索引 (默认从 HealthGoal 开始)
+    @Published var currentPage: OnboardingPage = .healthGoal
     
     /// 用户资料
     @Published var userProfile: UserProfile
@@ -81,12 +81,12 @@ class OnboardingViewModel: ObservableObject {
     
     /// 是否是第一页
     var isFirstPage: Bool {
-        currentPage == .nickname
+        currentPage == .healthGoal
     }
     
     /// 是否是最后一页
     var isLastPage: Bool {
-        currentPage == .healthGoal
+        currentPage == .bodyMeasurement
     }
     
     /// 是否可以继续下一页

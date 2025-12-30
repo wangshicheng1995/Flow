@@ -3,7 +3,7 @@
 //  Flow
 //
 //  Onboarding 容器视图 - 管理页面切换和进度显示
-//  采用 iOS 26 Liquid Glass 设计风格
+//  采用 Oportun 设计风格（纯白背景、简洁线条）
 //  Created on 2025-12-28.
 //
 
@@ -11,57 +11,83 @@ import SwiftUI
 
 struct OnboardingContainerView: View {
     @StateObject private var viewModel = OnboardingViewModel()
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        ZStack {
-            // 背景渐变
-            backgroundGradient
-                .ignoresSafeArea()
-            
+        OnboardingPageContainer {
             VStack(spacing: 0) {
-                // 顶部导航栏
-                headerView
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                // 1. 顶部导航栏 (置顶，符合 iOS 习惯)
+                OnboardingNavigationBar(
+                    showBackButton: true,
+                    showCancelButton: false,
+                    onBack: {
+                        if viewModel.isFirstPage {
+                            dismiss()
+                        } else {
+                            viewModel.previousPage()
+                        }
+                    },
+                    onCancel: {
+                        dismiss()
+                    }
+                )
+                .padding(.horizontal, OnboardingDesign.horizontalPadding)
+                .padding(.top, 8) // 稍微给点顶部呼吸空间
                 
-                // 进度指示器
-                progressIndicator
-                    .padding(.horizontal, 24)
+                // 2. 进度条 (放在导航栏下方，作为视觉分割)
+                progressBar
+                    .padding(.horizontal, OnboardingDesign.horizontalPadding + 4) // 稍微内缩一点，更精致
                     .padding(.top, 16)
                 
-                // 页面标题
-                titleView
-                    .padding(.horizontal, 24)
-                    .padding(.top, 24)
+                // 3. 页面标题
+                OnboardingTitleView(
+                    title: viewModel.currentPage.title,
+                    subtitle: viewModel.currentPage.subtitle
+                )
+                .padding(.horizontal, OnboardingDesign.horizontalPadding)
+                .padding(.top, 32) // 增加标题上方的留白
+                .animation(.easeInOut(duration: 0.2), value: viewModel.currentPage)
                 
-                // 页面内容
-                TabView(selection: $viewModel.currentPage) {
-                    NicknameInputView(viewModel: viewModel)
-                        .tag(OnboardingPage.nickname)
-                    
-                    GenderSelectionView(viewModel: viewModel)
-                        .tag(OnboardingPage.gender)
-                    
-                    BirthYearSelectionView(viewModel: viewModel)
-                        .tag(OnboardingPage.birthYear)
-                    
-                    BodyMeasurementView(viewModel: viewModel)
-                        .tag(OnboardingPage.bodyMeasurement)
-                    
-                    ActivityLevelView(viewModel: viewModel)
-                        .tag(OnboardingPage.activityLevel)
-                    
-                    HealthGoalView(viewModel: viewModel)
-                        .tag(OnboardingPage.healthGoal)
+                // 4. 页面内容 (使用 switch 实现，禁止滑动切换)
+                VStack {
+                    switch viewModel.currentPage {
+                    case .healthGoal:
+                        HealthGoalView(viewModel: viewModel)
+                    case .activityLevel:
+                        ActivityLevelView(viewModel: viewModel)
+                    case .nickname:
+                        NicknameInputView(viewModel: viewModel)
+                    case .gender:
+                        GenderSelectionView(viewModel: viewModel)
+                    case .birthYear:
+                        AgeSelectionView(viewModel: viewModel)
+                    case .bodyMeasurement:
+                        BodyMeasurementView(viewModel: viewModel)
+                    }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.3), value: viewModel.currentPage)
+                .frame(maxWidth: .infinity, maxHeight: .infinity) // 撑满剩余空间
+                .animation(.easeInOut(duration: 0.25), value: viewModel.currentPage)
                 
-                // 底部按钮
-                bottomButtons
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 32)
+                // 5. 底部按钮 (固定底部，在安全区域内)
+                OnboardingPrimaryButton(
+                    title: viewModel.isLastPage ? "完成" : "下一步",
+                    isEnabled: viewModel.canProceed,
+                    isLoading: viewModel.isSubmitting
+                ) {
+                    if viewModel.isLastPage {
+                        Task {
+                            await viewModel.submitProfile()
+                        }
+                    } else {
+                        viewModel.nextPage()
+                    }
+                }
+                .padding(.horizontal, OnboardingDesign.horizontalPadding)
+                .padding(.bottom, 32) // 增加底部安全区域边距
+            }
+            .onChange(of: viewModel.currentPage) { oldValue, newValue in
+                // 页面切换时自动收起键盘
+                UIApplication.shared.endEditing()
             }
         }
         .alert("提示", isPresented: $viewModel.showError) {
@@ -71,133 +97,31 @@ struct OnboardingContainerView: View {
         }
     }
     
-    // MARK: - 背景渐变
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: colorScheme == .dark
-                ? [Color(hex: "1a1a2e"), Color(hex: "16213e")]
-                : [Color(hex: "f8f9fa"), Color(hex: "e9ecef")],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-    
-    // MARK: - 顶部导航栏
-    private var headerView: some View {
-        HStack {
-            // 返回按钮
-            if !viewModel.isFirstPage {
-                Button(action: {
-                    viewModel.previousPage()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 44, height: 44)
-                        .background(.ultraThinMaterial, in: Circle())
-                }
-            } else {
-                Color.clear
-                    .frame(width: 44, height: 44)
-            }
-            
-            Spacer()
-            
-            // 跳过按钮（可选）
-            // Button("跳过") { }
-            //     .font(.system(size: 16, weight: .medium))
-            //     .foregroundStyle(.secondary)
-        }
-    }
-    
-    // MARK: - 进度指示器
-    private var progressIndicator: some View {
+    // MARK: - 进度条
+    private var progressBar: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 // 背景轨道
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(.quaternary)
-                    .frame(height: 8)
+                Rectangle()
+                    .fill(OnboardingDesign.borderColor)
+                    .frame(height: 4)
                 
                 // 进度条
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: geometry.size.width * viewModel.progress, height: 8)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.progress)
+                Rectangle()
+                    .fill(OnboardingDesign.accentColor)
+                    .frame(width: geometry.size.width * viewModel.progress, height: 4)
+                    .animation(.easeInOut(duration: 0.3), value: viewModel.progress)
             }
         }
-        .frame(height: 8)
+        .frame(height: 4)
     }
-    
-    // MARK: - 标题区域
-    private var titleView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(viewModel.currentPage.title)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-            
-            Text(viewModel.currentPage.subtitle)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(.easeInOut(duration: 0.2), value: viewModel.currentPage)
-    }
-    
-    // MARK: - 底部按钮
-    private var bottomButtons: some View {
-        Button(action: {
-            if viewModel.isLastPage {
-                Task {
-                    await viewModel.submitProfile()
-                }
-            } else {
-                viewModel.nextPage()
-            }
-        }) {
-            HStack(spacing: 8) {
-                if viewModel.isSubmitting {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Text(viewModel.isLastPage ? "进入 Flow" : "继续")
-                        .font(.system(size: 18, weight: .semibold))
-                    
-                    if !viewModel.isLastPage {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                }
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        viewModel.canProceed
-                            ? LinearGradient(
-                                colors: [Color.accentColor, Color.accentColor.opacity(0.85)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            : LinearGradient(
-                                colors: [Color.gray.opacity(0.5), Color.gray.opacity(0.4)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                    )
-            )
-            .shadow(color: viewModel.canProceed ? Color.accentColor.opacity(0.3) : .clear, radius: 12, y: 6)
-        }
-        .disabled(!viewModel.canProceed || viewModel.isSubmitting)
-        .animation(.easeInOut(duration: 0.2), value: viewModel.canProceed)
+}
+
+// MARK: - Extensions
+
+extension UIApplication {
+    func endEditing() {
+        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

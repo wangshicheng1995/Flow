@@ -2,8 +2,8 @@
 //  BodyMeasurementView.swift
 //  Flow
 //
-//  Onboarding 页面 3: 身高体重输入
-//  采用 iOS 26 Liquid Glass 设计风格
+//  Onboarding 页面: 身高体重输入
+//  采用 Oportun 设计风格
 //  Created on 2025-12-28.
 //
 
@@ -11,12 +11,9 @@ import SwiftUI
 
 struct BodyMeasurementView: View {
     @ObservedObject var viewModel: OnboardingViewModel
-    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 24) {
-            Spacer()
-            
             // BMI 显示卡片
             bmiCard
             
@@ -27,9 +24,9 @@ struct BodyMeasurementView: View {
             weightSection
             
             Spacer()
-            Spacer()
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, OnboardingDesign.horizontalPadding)
+        .frame(width: UIScreen.main.bounds.width)
     }
     
     // MARK: - BMI 卡片
@@ -37,101 +34,107 @@ struct BodyMeasurementView: View {
         VStack(spacing: 8) {
             Text("BMI")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundColor(OnboardingDesign.secondaryTextColor)
             
-            HStack(alignment: .lastTextBaseline, spacing: 4) {
-                Text(String(format: "%.1f", viewModel.userProfile.bmi))
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+            // 使用三明治布局保证数值居中且不重叠
+            HStack(alignment: .center, spacing: 12) {
+                // 左侧占位（隐藏）- 需要加上 badge 的宽度和间距
+                Text("正常") // 占位文字长度相近即可
+                    .font(.system(size: 14, weight: .semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .hidden()
                 
+                // 中间数值
+                Text(String(format: "%.1f", viewModel.userProfile.bmi))
+                    .font(.system(size: 48, weight: .bold)) // 稍微加大字号
+                    .foregroundColor(OnboardingDesign.primaryTextColor)
+                
+                // 右侧显示描述 - 胶囊样式
                 Text(viewModel.userProfile.bmiDescription)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(bmiColor)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(bmiColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(bmiColor.opacity(0.15)) // 浅色背景
+                    .clipShape(Capsule())
             }
         }
-        .padding(.vertical, 20)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(
-                            LinearGradient(
-                                colors: [.white.opacity(0.5), .white.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-        )
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
+        .padding(.vertical, 24)
     }
     
     // MARK: - 身高区域
     private var heightSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 16) {
             HStack {
-                Label("身高", systemImage: "arrow.up.and.down")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
+                Text("身高")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(OnboardingDesign.primaryTextColor)
                 
                 Spacer()
                 
                 Text("\(Int(viewModel.userProfile.heightCm)) cm")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.accentColor)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(OnboardingDesign.accentColor)
             }
             
-            Slider(
+            // 身高刻度尺
+            ScaleRulerWrapper(
                 value: $viewModel.userProfile.heightCm,
-                in: 100...220,
-                step: 1
+                range: 100...220,
+                step: 1,
+                majorStep: 10,
+                scaleSize: 10
             )
-            .tint(Color.accentColor)
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-        )
+        .padding(16)
     }
     
     // MARK: - 体重区域
     private var weightSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 16) {
             HStack {
-                Label("体重", systemImage: "scalemass.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
+                Text("体重")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(OnboardingDesign.primaryTextColor)
                 
                 Spacer()
                 
-                Text(String(format: "%.1f kg", viewModel.userProfile.weightKg))
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.accentColor)
+                // 显示为斤，智能去除 .0
+                Text(formattedWeight)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(OnboardingDesign.accentColor)
             }
             
-            Slider(
-                value: $viewModel.userProfile.weightKg,
-                in: 30...200,
-                step: 0.5
+            // 体重刻度尺 (单位：斤，精度 0.5)
+            ScaleRulerWrapper(
+                value: $viewModel.userProfile.weightJin,
+                range: 60...300,
+                step: 1,      // 1斤一个刻度
+                majorStep: 10, // 10斤一个大刻度
+                scaleSize: 10 // 每个刻度间隔 10pt
             )
-            .tint(Color.accentColor)
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-        )
+        .padding(16)
+    }
+    
+    // 格式化体重字符串
+    private var formattedWeight: String {
+        let jin = viewModel.userProfile.weightJin
+        // 如果小数部分为0，则显示整数
+        if jin.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f 斤", jin)
+        } else {
+            return String(format: "%.1f 斤", jin)
+        }
     }
     
     // MARK: - BMI 颜色
     private var bmiColor: Color {
         switch viewModel.userProfile.bmi {
         case ..<18.5: return .blue
-        case 18.5..<24: return .green
+        case 18.5..<24: return OnboardingDesign.accentColor
         case 24..<28: return .orange
         default: return .red
         }
@@ -139,8 +142,11 @@ struct BodyMeasurementView: View {
 }
 
 #Preview {
-    ZStack {
-        Color(hex: "f8f9fa").ignoresSafeArea()
-        BodyMeasurementView(viewModel: OnboardingViewModel())
+    OnboardingPageContainer {
+        VStack {
+            OnboardingTitleView(title: "身高和体重", subtitle: "用于计算你的 BMI 和每日需求")
+                .padding(.horizontal, OnboardingDesign.horizontalPadding)
+            BodyMeasurementView(viewModel: OnboardingViewModel())
+        }
     }
 }

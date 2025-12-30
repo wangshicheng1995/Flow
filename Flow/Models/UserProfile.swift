@@ -133,10 +133,22 @@ struct UserProfile: Codable {
     var createdAt: String?
     var updatedAt: String?
     
-    /// 计算年龄
+    /// 年龄 - 可读写，设置时自动更新 birthYear
     var age: Int {
-        let currentYear = Calendar.current.component(.year, from: Date())
-        return currentYear - birthYear
+        get {
+            let currentYear = Calendar.current.component(.year, from: Date())
+            return currentYear - birthYear
+        }
+        set {
+            let currentYear = Calendar.current.component(.year, from: Date())
+            birthYear = currentYear - newValue
+        }
+    }
+    
+    /// 体重（斤）- 用于 UI 显示和输入
+    var weightJin: Double {
+        get { weightKg * 2 }
+        set { weightKg = newValue / 2 }
     }
     
     /// 计算 BMI
@@ -193,11 +205,12 @@ struct UserProfile: Codable {
     
     /// 创建空的用户资料（用于 Onboarding 初始化）
     static func empty(userId: String) -> UserProfile {
+        let currentYear = Calendar.current.component(.year, from: Date())
         return UserProfile(
             userId: userId,
             nickname: "",
             gender: .male,
-            birthYear: 1990,
+            birthYear: currentYear - 21,  // 默认年龄 21 岁
             heightCm: 170,
             weightKg: 65,
             activityLevel: .moderate,
