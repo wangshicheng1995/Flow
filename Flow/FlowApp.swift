@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct FlowApp: App {
     @StateObject private var authManager = AuthenticationManager.shared
+    @StateObject private var networkPermissionManager = NetworkPermissionManager.shared
     @AppStorage(ThemePreference.storageKey) private var storedThemePreference = ThemePreference.system.rawValue
     
     var sharedModelContainer: ModelContainer = {
@@ -39,6 +40,10 @@ struct FlowApp: App {
                 if showSplash {
                     SplashView()
                         .onAppear {
+                            // 在 Splash 显示期间触发网络权限弹窗
+                            // 利用这 2 秒时间让用户完成网络权限授权
+                            networkPermissionManager.checkAndTriggerIfNeeded()
+                            
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                                 withAnimation {
                                     showSplash = false

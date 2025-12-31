@@ -14,7 +14,7 @@ class AuthenticationManager: ObservableObject {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Flow", category: "Authentication")
     
     // 调试开关：true = 需要 Apple 登录，false = 跳过登录直接进入 Onboarding
-    static let isAppleLoginEnabled = false // ← 设为 false 可在模拟器上调试 Onboarding
+    static let isAppleLoginEnabled = true // ← 设为 false 可在模拟器上调试 Onboarding
     
     @AppStorage("isAuthenticated") var isAuthenticated: Bool = false
     @AppStorage("userIdentifier") var userIdentifier: String = ""

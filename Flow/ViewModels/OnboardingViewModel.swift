@@ -175,9 +175,37 @@ class OnboardingViewModel: ObservableObject {
             onComplete?()
             
         } catch {
-            errorMessage = "保存失败，请稍后重试"
-            showError = true
-            print("❌ [OnboardingViewModel] 保存用户资料失败: \(error)")
+            // 检查是否是网络权限错误，如果是则自动重试一次
+            if NetworkPermissionManager.isNetworkPermissionError(error) {
+                print("⚠️ [OnboardingViewModel] 检测到网络权限错误，1.5秒后自动重试...")
+                
+                // 等待 1.5 秒后重试（给用户时间点击权限弹窗）
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                
+                do {
+                    _ = try await userProfileService.saveProfile(userProfile)
+                    
+                    // 重试成功
+                    authManager.hasCompletedOnboarding = true
+                    onComplete?()
+                    isSubmitting = false
+                    return
+                    
+                } catch {
+                    // 重试也失败，显示引导用户开启权限的提示
+                    if NetworkPermissionManager.isNetworkPermissionError(error) {
+                        errorMessage = NetworkPermissionManager.getPermissionErrorMessage()
+                    } else {
+                        errorMessage = "保存失败，请稍后重试"
+                    }
+                    showError = true
+                    print("❌ [OnboardingViewModel] 重试保存用户资料仍然失败: \(error)")
+                }
+            } else {
+                errorMessage = "保存失败，请稍后重试"
+                showError = true
+                print("❌ [OnboardingViewModel] 保存用户资料失败: \(error)")
+            }
         }
         
         isSubmitting = false
